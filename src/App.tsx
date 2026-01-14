@@ -5,12 +5,16 @@ import MeetingDetail from './pages/MeetingDetail';
 import MeetingHistory from './pages/MeetingHistory';
 import Settings from './pages/Settings';
 import Setup from './pages/Setup';
+import AdminOrchestrator from './pages/AdminOrchestrator';
+import AmbientDisplay from './pages/AmbientDisplay';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/setup" element={<Setup />} />
+        <Route path="/admin" element={<AdminOrchestrator />} />
+        <Route path="/display" element={<AmbientDisplay />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="meeting/:id" element={<MeetingDetail />} />

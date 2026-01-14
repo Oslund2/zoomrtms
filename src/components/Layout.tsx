@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
-import { Video, LayoutDashboard, History, Settings, Menu, X, Rocket } from 'lucide-react';
+import { Video, LayoutDashboard, History, Settings, Menu, X, Rocket, Brain, Monitor } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Layout() {
@@ -62,6 +62,25 @@ export default function Layout() {
               </NavLink>
             ))}
           </nav>
+
+          <div className="mt-6 pt-6 border-t border-slate-700">
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-3 px-4">Ambient Intelligence</p>
+            <Link
+              to="/admin"
+              className="flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-all"
+            >
+              <Brain className="w-5 h-5" />
+              <span className="font-medium">Admin Panel</span>
+            </Link>
+            <Link
+              to="/display"
+              target="_blank"
+              className="flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-all"
+            >
+              <Monitor className="w-5 h-5" />
+              <span className="font-medium">Display View</span>
+            </Link>
+          </div>
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4">

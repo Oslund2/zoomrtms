@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Check,
   ChevronRight,
@@ -12,7 +13,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Zap,
-  Download
+  Download,
+  ArrowLeft,
+  X
 } from 'lucide-react';
 import {
   generateNodeJSRTMSClient,
@@ -40,6 +43,7 @@ const STEPS = [
 ];
 
 export default function Setup() {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [setupState, setSetupState] = useState<SetupState>(() => {
     const saved = localStorage.getItem('rtms_setup_state');
@@ -105,6 +109,16 @@ export default function Setup() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
+        <div className="mb-6">
+          <button
+            onClick={() => navigate('/')}
+            className="inline-flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Back to Dashboard</span>
+          </button>
+        </div>
+
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
             RTMS Setup Wizard

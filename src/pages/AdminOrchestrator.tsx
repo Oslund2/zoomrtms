@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Settings,
   FileText,
@@ -15,6 +16,7 @@ import {
   Eye,
   ChevronDown,
   ChevronUp,
+  ArrowLeft,
 } from 'lucide-react';
 import {
   usePromptConfigs,
@@ -26,6 +28,7 @@ import { supabase } from '../lib/supabase';
 import type { PromptConfig } from '../types/database';
 
 export default function AdminOrchestrator() {
+  const navigate = useNavigate();
   const { prompts, loading: promptsLoading, updatePrompt } = usePromptConfigs();
   const { contexts, loading: contextsLoading, deleteContext, refetch: refetchContexts } = useExternalContexts();
   const { stats } = useAmbientStats();
@@ -119,6 +122,13 @@ export default function AdminOrchestrator() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/')}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                title="Back to Home"
+              >
+                <ArrowLeft className="w-5 h-5 text-slate-600" />
+              </button>
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center">
                 <Brain className="w-5 h-5 text-white" />
               </div>

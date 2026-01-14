@@ -44,6 +44,17 @@ async function hmacSha256(message: string, secret: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+function detectRoomType(topic: string): { roomType: string; roomNumber: number | null } {
+  const breakoutMatch = topic.match(/Breakout\s+Room\s+(\d+)/i);
+  if (breakoutMatch) {
+    const roomNumber = parseInt(breakoutMatch[1]);
+    if (roomNumber >= 1 && roomNumber <= 8) {
+      return { roomType: 'breakout', roomNumber };
+    }
+  }
+  return { roomType: 'main', roomNumber: null };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -85,6 +96,8 @@ Deno.serve(async (req: Request) => {
 
       const meetingTopic = payload.object?.topic || "Untitled Meeting";
       const hostName = operator?.display_name || payload.object?.host?.name || "Unknown Host";
+      
+      const { roomType, roomNumber } = detectRoomType(meetingTopic);
 
       const { data, error } = await supabase
         .from("meetings")
@@ -97,6 +110,8 @@ Deno.serve(async (req: Request) => {
             host_name: hostName,
             topic: meetingTopic,
             status: "active",
+            room_type: roomType,
+            room_number: roomNumber,
             started_at: new Date().toISOString(),
           },
           { onConflict: "meeting_uuid" }
@@ -118,7 +133,7 @@ Deno.serve(async (req: Request) => {
         meeting_id: data?.[0]?.id,
         event_type: "rtms",
         action: "stream_started",
-        metadata: { server_urls, rtms_stream_id },
+        metadata: { server_urls, rtms_stream_id, room_type: roomType, room_number: roomNumber },
       });
 
       return new Response(

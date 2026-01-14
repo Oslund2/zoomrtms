@@ -11,6 +11,9 @@ export interface Database {
           host_name: string | null;
           topic: string | null;
           status: string;
+          room_type: string;
+          room_number: number | null;
+          parent_meeting_id: string | null;
           started_at: string | null;
           ended_at: string | null;
           created_at: string;
@@ -25,6 +28,9 @@ export interface Database {
           host_name?: string | null;
           topic?: string | null;
           status?: string;
+          room_type?: string;
+          room_number?: number | null;
+          parent_meeting_id?: string | null;
           started_at?: string | null;
           ended_at?: string | null;
           created_at?: string;
@@ -39,6 +45,9 @@ export interface Database {
           host_name?: string | null;
           topic?: string | null;
           status?: string;
+          room_type?: string;
+          room_number?: number | null;
+          parent_meeting_id?: string | null;
           started_at?: string | null;
           ended_at?: string | null;
           created_at?: string;

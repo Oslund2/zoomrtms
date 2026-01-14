@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Settings as SettingsIcon,
   Webhook,
@@ -11,11 +12,16 @@ import {
   ExternalLink,
   Info,
   Server,
-  Zap
+  Zap,
+  Rocket,
+  Code,
+  BookOpen
 } from 'lucide-react';
+import { generateNodeJSRTMSClient, generateNpmInstallCommand } from '../lib/codeGenerator';
 
 export default function Settings() {
   const [copied, setCopied] = useState<string | null>(null);
+  const [showCodeSample, setShowCodeSample] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const webhookUrl = `${supabaseUrl}/functions/v1/zoom-webhook`;
@@ -27,6 +33,14 @@ export default function Settings() {
     setTimeout(() => setCopied(null), 2000);
   }
 
+  const sampleCode = generateNodeJSRTMSClient({
+    clientId: 'YOUR_CLIENT_ID',
+    clientSecret: 'YOUR_CLIENT_SECRET',
+    webhookSecret: 'YOUR_WEBHOOK_SECRET',
+    supabaseUrl,
+    dataEndpoint: dataUrl,
+  });
+
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
@@ -35,6 +49,62 @@ export default function Settings() {
       </div>
 
       <div className="space-y-6 max-w-4xl">
+        <section className="bg-gradient-to-br from-blue-600 to-cyan-500 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Rocket className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold mb-2">Quick Start Guide</h2>
+              <p className="text-blue-100 text-sm mb-4">
+                New to RTMS? Follow our step-by-step setup wizard to get started in minutes.
+              </p>
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/setup"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+                >
+                  <Rocket className="w-4 h-4" />
+                  Launch Setup Wizard
+                </Link>
+                <button
+                  onClick={() => setShowCodeSample(!showCodeSample)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg font-medium transition-colors"
+                >
+                  <Code className="w-4 h-4" />
+                  {showCodeSample ? 'Hide' : 'View'} Code Sample
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {showCodeSample && (
+            <div className="mt-4 bg-black/20 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Multi-Room RTMS Client (Node.js)</span>
+                <button
+                  onClick={() => copyToClipboard(sampleCode, 'sample')}
+                  className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-sm"
+                >
+                  {copied === 'sample' ? (
+                    <span className="flex items-center gap-1">
+                      <Check className="w-4 h-4" />
+                      Copied!
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <Copy className="w-4 h-4" />
+                      Copy
+                    </span>
+                  )}
+                </button>
+              </div>
+              <pre className="text-xs bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto max-h-64 scrollbar-thin">
+                {sampleCode}
+              </pre>
+            </div>
+          )}
+        </section>
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">

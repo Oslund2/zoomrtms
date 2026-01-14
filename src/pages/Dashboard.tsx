@@ -8,20 +8,27 @@ import {
   Clock,
   ArrowRight,
   Mic,
-  MonitorPlay
+  MonitorPlay,
+  Filter,
+  Layers
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Meeting, Participant, Transcript } from '../types/database';
 import { formatDistanceToNow } from 'date-fns';
+import RoomGrid from '../components/RoomGrid';
 
 interface MeetingWithStats extends Meeting {
   participant_count: number;
   transcript_count: number;
 }
 
+type RoomFilter = 'all' | 'main' | 'breakout';
+
 export default function Dashboard() {
   const [activeMeetings, setActiveMeetings] = useState<MeetingWithStats[]>([]);
   const [recentTranscripts, setRecentTranscripts] = useState<(Transcript & { meeting_topic?: string })[]>([]);
+  const [roomFilter, setRoomFilter] = useState<RoomFilter>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [stats, setStats] = useState({
     totalMeetings: 0,
     activeMeetings: 0,
@@ -105,6 +112,16 @@ export default function Dashboard() {
     return channel;
   }
 
+  const filteredMeetings = activeMeetings.filter((meeting) => {
+    if (roomFilter === 'all') return true;
+    return meeting.room_type === roomFilter;
+  });
+
+  const participantCounts: Record<string, number> = {};
+  activeMeetings.forEach((meeting) => {
+    participantCounts[meeting.id] = meeting.participant_count;
+  });
+
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
@@ -143,9 +160,49 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="font-semibold text-slate-900">Active Meetings</h2>
-              <span className="text-sm text-slate-500">{activeMeetings.length} live</span>
+            <div className="px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-slate-900">Active Meetings</h2>
+                <span className="text-sm text-slate-500">{activeMeetings.length} live</span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                      viewMode === 'grid'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Layers className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                      viewMode === 'list'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Video className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-slate-400" />
+                  <select
+                    value={roomFilter}
+                    onChange={(e) => setRoomFilter(e.target.value as RoomFilter)}
+                    className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Rooms</option>
+                    <option value="main">Main Room Only</option>
+                    <option value="breakout">Breakout Rooms Only</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             {loading ? (
@@ -162,12 +219,27 @@ export default function Dashboard() {
                 <p className="text-sm text-slate-500">
                   RTMS streams will appear here when Zoom meetings start
                 </p>
+                <Link
+                  to="/setup"
+                  className="inline-block mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Set up your first meeting →
+                </Link>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
-                {activeMeetings.map((meeting) => (
-                  <MeetingCard key={meeting.id} meeting={meeting} />
-                ))}
+              <div className="p-6">
+                {viewMode === 'grid' ? (
+                  <RoomGrid
+                    meetings={filteredMeetings}
+                    participantCounts={participantCounts}
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {filteredMeetings.map((meeting) => (
+                      <MeetingCard key={meeting.id} meeting={meeting} />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

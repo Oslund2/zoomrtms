@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Settings as SettingsIcon,
   Webhook,
@@ -15,11 +15,13 @@ import {
   Zap,
   Rocket,
   Code,
-  BookOpen
+  BookOpen,
+  ArrowLeft
 } from 'lucide-react';
 import { generateNodeJSRTMSClient, generateNpmInstallCommand } from '../lib/codeGenerator';
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [copied, setCopied] = useState<string | null>(null);
   const [showCodeSample, setShowCodeSample] = useState(false);
 
@@ -44,8 +46,19 @@ export default function Settings() {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500 mt-1">Configure your Zoom RTMS integration</p>
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={() => navigate('/')}
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            title="Back to Home"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+          </div>
+        </div>
+        <p className="text-slate-500">Configure your Zoom RTMS integration</p>
       </div>
 
       <div className="space-y-6 max-w-4xl">

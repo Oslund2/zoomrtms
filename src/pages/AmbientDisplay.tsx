@@ -63,6 +63,23 @@ export default function AmbientDisplay() {
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent" />
 
+      {!isDemoMode && stats.activeRooms === 0 && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 max-w-md text-center shadow-2xl">
+            <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Brain className="w-8 h-8 text-blue-400" />
+            </div>
+            <h2 className="text-2xl font-bold mb-3">No Active Data</h2>
+            <p className="text-slate-400 mb-6">
+              Enable Demo Mode to see the Ambient Intelligence display with synthetic meeting data.
+            </p>
+            <p className="text-sm text-slate-500 mb-4">
+              Look for the Demo Mode controls in the bottom-right corner or press <kbd className="px-2 py-1 bg-slate-800 border border-slate-600 rounded text-xs">D</kbd> on your keyboard.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="relative h-full flex flex-col p-6">
         <Header stats={stats} currentTime={currentTime} isDemoMode={isDemoMode} />
 

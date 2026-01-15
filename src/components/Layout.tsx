@@ -75,8 +75,7 @@ export default function Layout() {
               <span className="font-medium">Admin Panel</span>
             </Link>
             <Link
-              to="/display"
-              target="_blank"
+              to={isDemoMode ? "/display?demo=true" : "/display"}
               className="flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-all"
             >
               <Monitor className="w-5 h-5" />

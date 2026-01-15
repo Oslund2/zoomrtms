@@ -35,7 +35,7 @@ const DEMO_MODE_KEY = 'ambient-demo-mode';
 const DEMO_PAUSED_KEY = 'ambient-demo-paused';
 
 function generateInitialData(): DemoData {
-  const meetings = demoGenerator.generateMeetings(2, 18);
+  const meetings = demoGenerator.generateMeetings(9, 18);
   const participants = new Map<string, Participant[]>();
 
   // Generate participants for active meetings

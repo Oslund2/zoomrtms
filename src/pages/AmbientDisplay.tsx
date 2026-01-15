@@ -9,6 +9,9 @@ import {
   Users,
   Activity,
   Zap,
+  X,
+  MessageSquare,
+  Clock,
 } from 'lucide-react';
 import {
   useKnowledgeGraph,
@@ -18,6 +21,7 @@ import {
   useRoomSummaries,
 } from '../hooks/useAmbientData';
 import { useDemoMode } from '../contexts/DemoModeContext';
+import { AmbientSelectionProvider, useAmbientSelection } from '../contexts/AmbientSelectionContext';
 import type { InsightEvent } from '../types/database';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -30,12 +34,21 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function AmbientDisplay() {
+  return (
+    <AmbientSelectionProvider>
+      <AmbientDisplayContent />
+    </AmbientSelectionProvider>
+  );
+}
+
+function AmbientDisplayContent() {
   const { isDemoMode } = useDemoMode();
   const { nodes, edges } = useKnowledgeGraph(120);
   const { insights } = useInsights(30);
   const { heatmapData, categories } = useHeatmap();
   const { stats } = useAmbientStats();
   const { summaries } = useRoomSummaries();
+  const { selectedTopic, selectedRoom, clearAllFilters } = useAmbientSelection();
 
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -53,10 +66,15 @@ export default function AmbientDisplay() {
           document.exitFullscreen();
         }
       }
+      if (e.key === 'Escape') {
+        clearAllFilters();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [clearAllFilters]);
+
+  const hasActiveFilters = selectedTopic !== null || selectedRoom !== null;
 
   return (
     <div className="fixed inset-0 bg-slate-950 text-white overflow-hidden">
@@ -82,6 +100,32 @@ export default function AmbientDisplay() {
 
       <div className="relative h-full flex flex-col p-6">
         <Header stats={stats} currentTime={currentTime} isDemoMode={isDemoMode} />
+
+        {hasActiveFilters && (
+          <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-blue-500/10 border border-blue-400/30 rounded-xl">
+            <Target className="w-4 h-4 text-blue-400" />
+            <div className="flex items-center gap-2 flex-1">
+              <span className="text-sm text-blue-300">Active Filters:</span>
+              {selectedTopic && (
+                <span className="px-3 py-1 bg-blue-500/20 border border-blue-400/30 rounded-lg text-sm text-white">
+                  Topic: {selectedTopic.label}
+                </span>
+              )}
+              {selectedRoom !== null && (
+                <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-sm text-white">
+                  Room: {selectedRoom === 0 ? 'Main' : `R${selectedRoom}`}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={clearAllFilters}
+              className="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 rounded-lg text-sm text-white transition-colors flex items-center gap-2"
+            >
+              <X className="w-3 h-3" />
+              Clear All
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 grid grid-cols-12 gap-6 min-h-0 mt-6">
           <div className="col-span-5 flex flex-col gap-6 min-h-0">
@@ -203,7 +247,7 @@ function StatPill({
   );
 }
 
-function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: string; category: string | null; size: number; importance: number }[]; edges: { source: string; target: string }[] }) {
+function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: string; category: string | null; size: number; importance: number; roomMentions: Record<string, number> }[]; edges: { source: string; target: string }[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
@@ -211,6 +255,8 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const isDraggingRef = useRef(false);
+  const clickStartPos = useRef<{ x: number; y: number } | null>(null);
+  const { selectedTopic, setSelectedTopic } = useAmbientSelection();
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -293,12 +339,19 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
       const color = CATEGORY_COLORS[node.category || 'General'] || CATEGORY_COLORS.General;
       const isHovered = node.id === hoveredNodeId;
       const isDragged = node.id === draggedNodeId;
+      const isSelected = selectedTopic?.id === node.id;
 
-      // Enhanced glow for hovered/dragged nodes
-      const glowSize = (isHovered || isDragged) ? size * 2 : size * 1.5;
+      // Enhanced glow for hovered/dragged/selected nodes
+      const glowSize = (isHovered || isDragged || isSelected) ? size * 2.5 : size * 1.5;
       const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, glowSize);
-      gradient.addColorStop(0, color);
-      gradient.addColorStop(1, 'transparent');
+      if (isSelected) {
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(0.4, color + '80');
+        gradient.addColorStop(1, 'transparent');
+      } else {
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(1, 'transparent');
+      }
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, glowSize, 0, Math.PI * 2);
@@ -309,7 +362,7 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
       ctx.fillStyle = color;
       ctx.fill();
 
-      // Add ring for hovered/dragged nodes
+      // Add ring for hovered/dragged/selected nodes
       if (isHovered || isDragged) {
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, size / 2 + 3, 0, Math.PI * 2);
@@ -318,15 +371,30 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
         ctx.stroke();
       }
 
+      // Add double ring for selected nodes
+      if (isSelected) {
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, size / 2 + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = '#60a5fa';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, size / 2 + 9, 0, Math.PI * 2);
+        ctx.strokeStyle = '#60a5fa40';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
       ctx.fillStyle = '#ffffff';
-      ctx.font = `${Math.max(10, size / 3)}px Inter, system-ui, sans-serif`;
+      ctx.font = `${isSelected ? 'bold ' : ''}${Math.max(10, size / 3)}px Inter, system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(node.label.slice(0, 15), pos.x, pos.y + size / 2 + 12);
     });
 
     animationRef.current = requestAnimationFrame(draw);
-  }, [nodes, edges, draggedNodeId, hoveredNodeId]);
+  }, [nodes, edges, draggedNodeId, hoveredNodeId, selectedTopic]);
 
   useEffect(() => {
     draw();
@@ -363,10 +431,12 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
     const x = (e.clientX - rect.left) / 2;
     const y = (e.clientY - rect.top) / 2;
 
+    clickStartPos.current = { x, y };
+
     const nodeId = getNodeAtPosition(x, y);
     if (nodeId) {
       setDraggedNodeId(nodeId);
-      isDraggingRef.current = true;
+      isDraggingRef.current = false;
     }
   }, [getNodeAtPosition]);
 
@@ -378,13 +448,23 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
     const x = (e.clientX - rect.left) / 2;
     const y = (e.clientY - rect.top) / 2;
 
-    if (isDraggingRef.current && draggedNodeId) {
-      const pos = positionsRef.current.get(draggedNodeId);
-      if (pos) {
-        pos.x = x;
-        pos.y = y;
-        pos.vx = 0;
-        pos.vy = 0;
+    if (draggedNodeId && clickStartPos.current) {
+      const dx = x - clickStartPos.current.x;
+      const dy = y - clickStartPos.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > 5) {
+        isDraggingRef.current = true;
+      }
+
+      if (isDraggingRef.current) {
+        const pos = positionsRef.current.get(draggedNodeId);
+        if (pos) {
+          pos.x = x;
+          pos.y = y;
+          pos.vx = 0;
+          pos.vy = 0;
+        }
       }
     } else {
       const nodeId = getNodeAtPosition(x, y);
@@ -394,10 +474,26 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
 
   const handleMouseUp = useCallback(() => {
     if (draggedNodeId) {
+      if (!isDraggingRef.current) {
+        const node = nodes.find(n => n.id === draggedNodeId);
+        if (node) {
+          if (selectedTopic?.id === node.id) {
+            setSelectedTopic(null);
+          } else {
+            setSelectedTopic({
+              id: node.id,
+              label: node.label,
+              category: node.category,
+              roomMentions: node.roomMentions,
+            });
+          }
+        }
+      }
       setDraggedNodeId(null);
       isDraggingRef.current = false;
     }
-  }, [draggedNodeId]);
+    clickStartPos.current = null;
+  }, [draggedNodeId, nodes, selectedTopic, setSelectedTopic]);
 
   const handleMouseLeave = useCallback(() => {
     setDraggedNodeId(null);
@@ -441,6 +537,7 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
 function HeatmapPanel({ data, categories }: { data: { room: number; category: string; intensity: number; topics: string[] }[]; categories: string[] }) {
   const rooms = ['Main', '1', '2', '3', '4', '5', '6', '7', '8'];
   const displayCategories = categories.length > 0 ? categories : ['Strategy', 'Operations', 'Technology', 'People', 'Finance'];
+  const { selectedTopic, selectedRoom, setSelectedRoom } = useAmbientSelection();
 
   return (
     <div className="h-full bg-slate-900/50 rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden">
@@ -469,17 +566,31 @@ function HeatmapPanel({ data, categories }: { data: { room: number; category: st
                 const intensity = cell?.intensity || 0;
                 const color = CATEGORY_COLORS[category] || CATEGORY_COLORS.General;
 
+                const hasSelectedTopic = selectedTopic && cell?.topics.includes(selectedTopic.label);
+                const isSelectedRoom = selectedRoom === roomNumber;
+                const isRelevant = hasSelectedTopic || isSelectedRoom || (selectedTopic && Object.keys(selectedTopic.roomMentions).includes(roomNumber.toString()) && category === selectedTopic.category);
+
                 return (
                   <div
                     key={`${category}-${room}`}
-                    className="aspect-square rounded-lg relative group cursor-pointer transition-transform hover:scale-105"
+                    className={`aspect-square rounded-lg relative group cursor-pointer transition-all hover:scale-105 ${
+                      isRelevant ? 'ring-2 ring-blue-400 ring-offset-1 ring-offset-slate-900 scale-105 animate-pulse' : ''
+                    }`}
                     style={{
                       backgroundColor: intensity > 0 ? `${color}${Math.round(intensity * 80 + 20).toString(16).padStart(2, '0')}` : 'rgba(100, 116, 139, 0.1)',
+                      opacity: selectedTopic && !isRelevant ? 0.3 : 1,
                     }}
+                    onClick={() => setSelectedRoom(selectedRoom === roomNumber ? null : roomNumber)}
                   >
+                    {hasSelectedTopic && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full border-2 border-slate-900 animate-pulse" />
+                    )}
                     {cell && cell.topics.length > 0 && (
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-800 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-800 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap max-w-xs">
                         <div className="text-xs text-white font-medium">{cell.topics.slice(0, 3).join(', ')}</div>
+                        {hasSelectedTopic && (
+                          <div className="text-xs text-blue-300 mt-1">✓ Contains: {selectedTopic.label}</div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -506,40 +617,82 @@ function HeatmapPanel({ data, categories }: { data: { room: number; category: st
 }
 
 function RoomStatusPanel({ stats, summaries }: { stats: ReturnType<typeof useAmbientStats>['stats']; summaries: ReturnType<typeof useRoomSummaries>['summaries'] }) {
+  const { isDemoMode } = useDemoMode();
   const allRooms = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  const { selectedRoom, setSelectedRoom, selectedTopic } = useAmbientSelection();
 
   return (
     <div className="h-full bg-slate-900/50 rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-slate-700/50 flex items-center gap-2">
         <Users className="w-5 h-5 text-emerald-400" />
         <h2 className="text-lg font-semibold text-white">Room Activity</h2>
+        <span className="text-xs text-slate-400">({stats.activeRooms} active)</span>
       </div>
 
-      <div className="p-4 grid grid-cols-9 gap-2">
+      <div className="p-3 grid grid-cols-9 gap-2">
         {allRooms.map((roomNumber) => {
           const isActive = roomNumber === 0 ? stats.roomStatus.main : stats.roomStatus.breakout.includes(roomNumber);
           const summary = summaries.find((s) => s.room_number === roomNumber);
+          const isSelected = selectedRoom === roomNumber;
+          const hasSelectedTopic = selectedTopic && summary?.key_topics &&
+            (summary.key_topics as string[]).includes(selectedTopic.label);
+
+          const participantCount = isDemoMode ? Math.floor(Math.random() * 8) + 4 : 0;
+          const sentiment = summary?.sentiment_score || 0.5;
+          const sentimentColor = sentiment > 0.6 ? 'emerald' : sentiment < 0.4 ? 'amber' : 'blue';
 
           return (
             <div
               key={roomNumber}
-              className={`rounded-xl p-3 text-center transition-all ${
-                isActive
-                  ? 'bg-emerald-500/20 border border-emerald-500/30'
-                  : 'bg-slate-800/50 border border-slate-700/30'
+              onClick={() => setSelectedRoom(isSelected ? null : roomNumber)}
+              className={`rounded-xl p-2 cursor-pointer transition-all hover:scale-105 relative ${
+                isSelected
+                  ? 'bg-blue-500/30 border-2 border-blue-400 ring-2 ring-blue-400/50'
+                  : isActive
+                  ? 'bg-emerald-500/10 border border-emerald-500/30'
+                  : 'bg-slate-800/50 border border-slate-700/30 opacity-50'
               }`}
             >
-              <div className="flex items-center justify-center gap-1 mb-1">
-                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-                <span className="text-sm font-medium text-white">
-                  {roomNumber === 0 ? 'M' : roomNumber}
-                </span>
-              </div>
-              {summary && (
-                <div className="text-xs text-slate-400 truncate">
-                  {(summary.key_topics as string[])?.[0] || ''}
-                </div>
+              {hasSelectedTopic && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full border-2 border-slate-900 animate-pulse z-10" />
               )}
+
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-1">
+                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                  <span className="text-sm font-bold text-white">
+                    {roomNumber === 0 ? 'M' : roomNumber}
+                  </span>
+                </div>
+
+                {isActive && (
+                  <>
+                    <div className="flex items-center gap-0.5 text-xs text-slate-400">
+                      <Users className="w-3 h-3" />
+                      <span>{participantCount}</span>
+                    </div>
+
+                    {summary && (
+                      <>
+                        <div className={`w-full h-1 rounded-full bg-${sentimentColor}-500/30`}>
+                          <div
+                            className={`h-full rounded-full bg-${sentimentColor}-400 transition-all`}
+                            style={{ width: `${sentiment * 100}%` }}
+                          />
+                        </div>
+
+                        <div className="text-[10px] text-slate-400 truncate w-full text-center leading-tight">
+                          {(summary.key_topics as string[])?.[0]?.slice(0, 12) || ''}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {!isActive && (
+                  <span className="text-[10px] text-slate-500">Idle</span>
+                )}
+              </div>
             </div>
           );
         })}
@@ -550,10 +703,22 @@ function RoomStatusPanel({ stats, summaries }: { stats: ReturnType<typeof useAmb
 
 function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
   const feedRef = useRef<HTMLDivElement>(null);
+  const { selectedTopic, selectedRoom } = useAmbientSelection();
+  const [autoScroll, setAutoScroll] = useState(true);
+
+  const filteredInsights = insights.filter((insight) => {
+    if (selectedTopic && !insight.related_topics.includes(selectedTopic.label)) {
+      return false;
+    }
+    if (selectedRoom !== null && !insight.involved_rooms.includes(selectedRoom)) {
+      return false;
+    }
+    return true;
+  });
 
   useEffect(() => {
     const feed = feedRef.current;
-    if (!feed) return;
+    if (!feed || !autoScroll) return;
 
     let scrollPosition = 0;
     const scrollSpeed = 0.5;
@@ -568,7 +733,12 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
 
     const interval = setInterval(scroll, 50);
     return () => clearInterval(interval);
-  }, [insights]);
+  }, [filteredInsights, autoScroll]);
+
+  const handleScroll = () => {
+    setAutoScroll(false);
+    setTimeout(() => setAutoScroll(true), 5000);
+  };
 
   const getInsightIcon = (type: string) => {
     switch (type) {
@@ -595,13 +765,28 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
 
   return (
     <div className="h-full bg-slate-900/50 rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden flex flex-col">
-      <div className="px-5 py-3 border-b border-slate-700/50 flex items-center gap-2">
-        <Lightbulb className="w-5 h-5 text-amber-400" />
-        <h2 className="text-lg font-semibold text-white">Live Insights</h2>
+      <div className="px-5 py-3 border-b border-slate-700/50 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Lightbulb className="w-5 h-5 text-amber-400" />
+          <h2 className="text-lg font-semibold text-white">Live Insights</h2>
+        </div>
+        {(selectedTopic || selectedRoom !== null) && (
+          <span className="px-2 py-1 bg-blue-500/20 border border-blue-400/30 rounded-lg text-xs text-blue-300">
+            {filteredInsights.length} of {insights.length}
+          </span>
+        )}
       </div>
 
-      <div ref={feedRef} className="flex-1 overflow-hidden p-4 space-y-3">
-        {insights.length === 0 ? (
+      <div ref={feedRef} className="flex-1 overflow-hidden p-4 space-y-3" onWheel={handleScroll}>
+        {filteredInsights.length === 0 && insights.length > 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <Target className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400">No insights match current filters</p>
+              <p className="text-sm text-slate-500">Try selecting a different topic or room</p>
+            </div>
+          </div>
+        ) : insights.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
               <Lightbulb className="w-12 h-12 text-slate-600 mx-auto mb-3" />
@@ -610,12 +795,15 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
             </div>
           </div>
         ) : (
-          insights.map((insight) => {
+          filteredInsights.map((insight) => {
             const Icon = getInsightIcon(insight.insight_type);
+            const hasMatchingTopic = selectedTopic && insight.related_topics.includes(selectedTopic.label);
             return (
               <div
                 key={insight.id}
-                className={`p-4 rounded-xl border ${getInsightColors(insight.insight_type, insight.severity)} transition-all`}
+                className={`p-4 rounded-xl border ${getInsightColors(insight.insight_type, insight.severity)} transition-all ${
+                  hasMatchingTopic ? 'ring-2 ring-blue-400/50' : ''
+                }`}
               >
                 <div className="flex items-start gap-3">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -632,15 +820,27 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
                     <p className="text-xs text-slate-300 line-clamp-2">
                       {insight.description}
                     </p>
-                    {insight.involved_rooms && insight.involved_rooms.length > 0 && (
-                      <div className="flex items-center gap-1 mt-2">
-                        {insight.involved_rooms.map((room) => (
-                          <span key={room} className="px-1.5 py-0.5 bg-slate-700/50 text-xs text-slate-300 rounded">
-                            {room === 0 ? 'Main' : `R${room}`}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      {insight.involved_rooms && insight.involved_rooms.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          {insight.involved_rooms.map((room) => (
+                            <span key={room} className={`px-1.5 py-0.5 text-xs rounded ${
+                              selectedRoom === room
+                                ? 'bg-emerald-500/30 border border-emerald-400/50 text-emerald-300'
+                                : 'bg-slate-700/50 text-slate-300'
+                            }`}>
+                              {room === 0 ? 'Main' : `R${room}`}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {hasMatchingTopic && (
+                        <span className="px-2 py-0.5 bg-blue-500/20 border border-blue-400/40 text-xs text-blue-300 rounded flex items-center gap-1">
+                          <Target className="w-3 h-3" />
+                          {selectedTopic.label}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -660,7 +860,8 @@ function Footer({ stats }: { stats: ReturnType<typeof useAmbientStats>['stats'] 
           <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
           <span>Real-time Analysis Active</span>
         </div>
-        <span>Press F for fullscreen</span>
+        <span>Click topics to filter • Click rooms to focus</span>
+        <span>Press F for fullscreen • ESC to clear filters</span>
       </div>
       <div className="flex items-center gap-4">
         {Object.entries(CATEGORY_COLORS).slice(0, 5).map(([name, color]) => (

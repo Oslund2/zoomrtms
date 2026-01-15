@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Video,
@@ -12,10 +12,10 @@ import {
   Filter,
   Layers
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import type { Meeting, Participant, Transcript } from '../types/database';
+import type { Meeting } from '../types/database';
 import { formatDistanceToNow } from 'date-fns';
 import RoomGrid from '../components/RoomGrid';
+import { useDashboardData } from '../hooks/useDashboardData';
 
 interface MeetingWithStats extends Meeting {
   participant_count: number;
@@ -25,92 +25,9 @@ interface MeetingWithStats extends Meeting {
 type RoomFilter = 'all' | 'main' | 'breakout';
 
 export default function Dashboard() {
-  const [activeMeetings, setActiveMeetings] = useState<MeetingWithStats[]>([]);
-  const [recentTranscripts, setRecentTranscripts] = useState<(Transcript & { meeting_topic?: string })[]>([]);
+  const { activeMeetings, recentTranscripts, stats, loading } = useDashboardData();
   const [roomFilter, setRoomFilter] = useState<RoomFilter>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [stats, setStats] = useState({
-    totalMeetings: 0,
-    activeMeetings: 0,
-    totalParticipants: 0,
-    totalTranscripts: 0,
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchData();
-    const channel = setupRealtimeSubscription();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  async function fetchData() {
-    setLoading(true);
-
-    const [meetingsRes, participantsRes, transcriptsRes] = await Promise.all([
-      supabase.from('meetings').select('*').eq('status', 'active').order('started_at', { ascending: false }),
-      supabase.from('participants').select('meeting_id, is_active'),
-      supabase.from('transcripts').select('*, meetings(topic)').order('created_at', { ascending: false }).limit(5),
-    ]);
-
-    const { count: totalMeetings } = await supabase
-      .from('meetings')
-      .select('*', { count: 'exact', head: true });
-
-    const meetings = meetingsRes.data || [];
-    const participants = participantsRes.data || [];
-
-    const meetingsWithStats: MeetingWithStats[] = meetings.map((meeting) => {
-      const meetingParticipants = participants.filter(
-        (p) => p.meeting_id === meeting.id && p.is_active
-      );
-      return {
-        ...meeting,
-        participant_count: meetingParticipants.length,
-        transcript_count: 0,
-      };
-    });
-
-    const recentTranscriptsWithTopic = (transcriptsRes.data || []).map((t: any) => ({
-      ...t,
-      meeting_topic: t.meetings?.topic,
-    }));
-
-    setActiveMeetings(meetingsWithStats);
-    setRecentTranscripts(recentTranscriptsWithTopic);
-    setStats({
-      totalMeetings: totalMeetings || 0,
-      activeMeetings: meetings.length,
-      totalParticipants: participants.filter((p) => p.is_active).length,
-      totalTranscripts: 0,
-    });
-
-    setLoading(false);
-  }
-
-  function setupRealtimeSubscription() {
-    const channel = supabase
-      .channel('dashboard-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'meetings' },
-        () => fetchData()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'participants' },
-        () => fetchData()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'transcripts' },
-        () => fetchData()
-      )
-      .subscribe();
-
-    return channel;
-  }
 
   const filteredMeetings = activeMeetings.filter((meeting) => {
     if (roomFilter === 'all') return true;

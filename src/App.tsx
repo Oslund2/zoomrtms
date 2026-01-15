@@ -7,6 +7,7 @@ import Settings from './pages/Settings';
 import Setup from './pages/Setup';
 import AdminOrchestrator from './pages/AdminOrchestrator';
 import AmbientDisplay from './pages/AmbientDisplay';
+import DemoModeControls from './components/DemoModeControls';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
+      <DemoModeControls />
     </BrowserRouter>
   );
 }

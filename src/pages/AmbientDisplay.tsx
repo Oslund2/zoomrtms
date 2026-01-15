@@ -17,6 +17,7 @@ import {
   useAmbientStats,
   useRoomSummaries,
 } from '../hooks/useAmbientData';
+import { useDemoMode } from '../contexts/DemoModeContext';
 import type { InsightEvent } from '../types/database';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -29,6 +30,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function AmbientDisplay() {
+  const { isDemoMode } = useDemoMode();
   const { nodes, edges } = useKnowledgeGraph(120);
   const { insights } = useInsights(30);
   const { heatmapData, categories } = useHeatmap();
@@ -62,7 +64,7 @@ export default function AmbientDisplay() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent" />
 
       <div className="relative h-full flex flex-col p-6">
-        <Header stats={stats} currentTime={currentTime} />
+        <Header stats={stats} currentTime={currentTime} isDemoMode={isDemoMode} />
 
         <div className="flex-1 grid grid-cols-12 gap-6 min-h-0 mt-6">
           <div className="col-span-5 flex flex-col gap-6 min-h-0">
@@ -91,7 +93,7 @@ export default function AmbientDisplay() {
   );
 }
 
-function Header({ stats, currentTime }: { stats: ReturnType<typeof useAmbientStats>['stats']; currentTime: Date }) {
+function Header({ stats, currentTime, isDemoMode }: { stats: ReturnType<typeof useAmbientStats>['stats']; currentTime: Date; isDemoMode: boolean }) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-4">
@@ -99,7 +101,14 @@ function Header({ stats, currentTime }: { stats: ReturnType<typeof useAmbientSta
           <Brain className="w-7 h-7 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Ambient Intelligence</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-white tracking-tight">Ambient Intelligence</h1>
+            {isDemoMode && (
+              <span className="px-3 py-1 bg-blue-500/20 border border-blue-400/30 rounded-full text-xs font-semibold text-blue-300 uppercase tracking-wider">
+                Demo Mode
+              </span>
+            )}
+          </div>
           <p className="text-blue-300/80 text-sm">Company Transformation Event - Live Analysis</p>
         </div>
       </div>

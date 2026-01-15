@@ -10,9 +10,9 @@ import {
   Filter,
   X
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import type { Meeting } from '../types/database';
 import { format, formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'date-fns';
+import { useMeetingHistory } from '../hooks/useMeetingHistory';
 
 interface MeetingWithCounts extends Meeting {
   participants: { count: number }[];
@@ -20,38 +20,14 @@ interface MeetingWithCounts extends Meeting {
 }
 
 export default function MeetingHistory() {
-  const [meetings, setMeetings] = useState<MeetingWithCounts[]>([]);
+  const { meetings, loading } = useMeetingHistory();
   const [filteredMeetings, setFilteredMeetings] = useState<MeetingWithCounts[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'ended'>('all');
 
   useEffect(() => {
-    fetchMeetings();
-  }, []);
-
-  useEffect(() => {
     filterMeetings();
   }, [meetings, searchQuery, statusFilter]);
-
-  async function fetchMeetings() {
-    setLoading(true);
-
-    const { data, error } = await supabase
-      .from('meetings')
-      .select(`
-        *,
-        participants(count),
-        transcripts(count)
-      `)
-      .order('started_at', { ascending: false });
-
-    if (!error && data) {
-      setMeetings(data as MeetingWithCounts[]);
-    }
-
-    setLoading(false);
-  }
 
   function filterMeetings() {
     let filtered = [...meetings];

@@ -1,8 +1,10 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
 import { Video, LayoutDashboard, History, Settings, Menu, X, Rocket, Brain, Monitor } from 'lucide-react';
 import { useState } from 'react';
+import { useDemoMode } from '../contexts/DemoModeContext';
 
 export default function Layout() {
+  const { isDemoMode } = useDemoMode();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = [
@@ -105,6 +107,14 @@ export default function Layout() {
       </aside>
 
       <main className="lg:ml-64 min-h-screen">
+        {isDemoMode && (
+          <div className="sticky top-0 z-40 bg-blue-500/10 border-b border-blue-400/20 backdrop-blur-sm">
+            <div className="px-6 py-2 flex items-center justify-center gap-2 text-sm">
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+              <span className="font-medium text-blue-700">Demo Mode Active - Displaying Synthetic Data</span>
+            </div>
+          </div>
+        )}
         <Outlet />
       </main>
     </div>

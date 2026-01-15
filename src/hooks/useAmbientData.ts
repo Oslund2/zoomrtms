@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { useDemoMode } from '../contexts/DemoModeContext';
 import type {
   PromptConfig,
   ExternalContext,
@@ -108,11 +109,46 @@ export function useExternalContexts() {
 }
 
 export function useKnowledgeGraph(sinceMinutes = 60) {
+  const { isDemoMode, demoData } = useDemoMode();
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchGraph = useCallback(async () => {
+    if (isDemoMode) {
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      const rawNodes = demoData.topicNodes.slice(0, 25);
+      const nodeIds = rawNodes.map((n) => n.id);
+      const rawEdges = demoData.topicEdges.filter(
+        (e) => nodeIds.includes(e.source_node_id) && nodeIds.includes(e.target_node_id)
+      );
+
+      setNodes(
+        rawNodes.map((n) => ({
+          id: n.id,
+          label: n.label,
+          category: n.category,
+          size: Math.min(50, 10 + n.mention_count * 3),
+          roomMentions: n.room_mentions as Record<string, number>,
+          importance: n.importance_score,
+        }))
+      );
+
+      setEdges(
+        rawEdges.map((e) => ({
+          id: e.id,
+          source: e.source_node_id,
+          target: e.target_node_id,
+          type: e.relationship_type,
+          weight: e.weight,
+        }))
+      );
+
+      setLoading(false);
+      return;
+    }
+
     const sinceTime = new Date(Date.now() - sinceMinutes * 60 * 1000).toISOString();
 
     const { data: rawNodes } = await supabase
@@ -156,10 +192,14 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
     );
 
     setLoading(false);
-  }, [sinceMinutes]);
+  }, [sinceMinutes, isDemoMode, demoData]);
 
   useEffect(() => {
     fetchGraph();
+
+    if (isDemoMode) {
+      return;
+    }
 
     const channel = supabase
       .channel('graph-changes')
@@ -173,16 +213,24 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [fetchGraph]);
+  }, [fetchGraph, isDemoMode]);
 
   return { nodes, edges, loading, refetch: fetchGraph };
 }
 
 export function useInsights(limit = 20) {
+  const { isDemoMode, demoData } = useDemoMode();
   const [insights, setInsights] = useState<InsightEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchInsights = useCallback(async () => {
+    if (isDemoMode) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setInsights(demoData.insights.slice(0, limit));
+      setLoading(false);
+      return;
+    }
+
     const { data } = await supabase
       .from('insight_events')
       .select('*')
@@ -190,10 +238,14 @@ export function useInsights(limit = 20) {
       .limit(limit);
     setInsights(data || []);
     setLoading(false);
-  }, [limit]);
+  }, [limit, isDemoMode, demoData]);
 
   useEffect(() => {
     fetchInsights();
+
+    if (isDemoMode) {
+      return;
+    }
 
     const channel = supabase
       .channel('insights-changes')
@@ -203,17 +255,53 @@ export function useInsights(limit = 20) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchInsights]);
+  }, [fetchInsights, isDemoMode]);
 
   return { insights, loading, refetch: fetchInsights };
 }
 
 export function useHeatmap() {
+  const { isDemoMode, demoData } = useDemoMode();
   const [heatmapData, setHeatmapData] = useState<HeatmapCell[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchHeatmap = useCallback(async () => {
+    if (isDemoMode) {
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      const summaries = demoData.summaries;
+      const topics = demoData.topicNodes;
+
+      const uniqueCategories = [...new Set(topics.map((t) => t.category).filter(Boolean))];
+      const cats = uniqueCategories.length > 0 ? uniqueCategories : ['Strategy', 'Operations', 'Technology', 'People', 'Finance'];
+      setCategories(cats as string[]);
+
+      const rooms = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+      const data: HeatmapCell[] = [];
+
+      for (const room of rooms) {
+        const roomSummaries = summaries.filter((s) => s.room_number === room);
+        const roomTopics = roomSummaries.flatMap((s) => (s.key_topics as string[]));
+
+        for (const category of cats) {
+          const categoryTopics = topics.filter((t) => t.category === category).map((t) => t.label);
+          const matchingTopics = roomTopics.filter((t) => categoryTopics.includes(t));
+
+          data.push({
+            room,
+            category: category as string,
+            intensity: Math.min(1, matchingTopics.length / 5),
+            topics: [...new Set(matchingTopics)],
+          });
+        }
+      }
+
+      setHeatmapData(data);
+      setLoading(false);
+      return;
+    }
+
     const sinceTime = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
     const { data: summaries } = await supabase
@@ -254,10 +342,14 @@ export function useHeatmap() {
 
     setHeatmapData(data);
     setLoading(false);
-  }, []);
+  }, [isDemoMode, demoData]);
 
   useEffect(() => {
     fetchHeatmap();
+
+    if (isDemoMode) {
+      return;
+    }
 
     const channel = supabase
       .channel('heatmap-changes')
@@ -270,12 +362,13 @@ export function useHeatmap() {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [fetchHeatmap]);
+  }, [fetchHeatmap, isDemoMode]);
 
   return { heatmapData, categories, loading, refetch: fetchHeatmap };
 }
 
 export function useAmbientStats() {
+  const { isDemoMode, demoData } = useDemoMode();
   const [stats, setStats] = useState<AmbientStats>({
     totalTopics: 0,
     totalInsights: 0,
@@ -288,6 +381,28 @@ export function useAmbientStats() {
   const [loading, setLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
+    if (isDemoMode) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const insights = demoData.insights;
+      const meetings = demoData.meetings.filter(m => m.status === 'active');
+
+      setStats({
+        totalTopics: demoData.topicNodes.length,
+        totalInsights: insights.length,
+        alignments: insights.filter((i) => i.insight_type === 'alignment').length,
+        misalignments: insights.filter((i) => i.insight_type === 'misalignment').length,
+        gaps: insights.filter((i) => i.insight_type === 'gap').length,
+        activeRooms: meetings.length,
+        roomStatus: {
+          main: meetings.some((m) => m.room_type === 'main'),
+          breakout: meetings.filter((m) => m.room_type === 'breakout').map((m) => m.room_number as number),
+        },
+      });
+      setLoading(false);
+      return;
+    }
+
     const sinceTime = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
     const [nodesRes, insightsRes, meetingsRes] = await Promise.all([
@@ -312,10 +427,14 @@ export function useAmbientStats() {
       },
     });
     setLoading(false);
-  }, []);
+  }, [isDemoMode, demoData]);
 
   useEffect(() => {
     fetchStats();
+
+    if (isDemoMode) {
+      return;
+    }
 
     const channel = supabase
       .channel('stats-changes')
@@ -329,16 +448,32 @@ export function useAmbientStats() {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [fetchStats]);
+  }, [fetchStats, isDemoMode]);
 
   return { stats, loading, refetch: fetchStats };
 }
 
 export function useRoomSummaries() {
+  const { isDemoMode, demoData } = useDemoMode();
   const [summaries, setSummaries] = useState<AnalysisSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSummaries = useCallback(async () => {
+    if (isDemoMode) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const uniqueRooms = new Map<number, AnalysisSummary>();
+      demoData.summaries.forEach((s) => {
+        if (!uniqueRooms.has(s.room_number)) {
+          uniqueRooms.set(s.room_number, s);
+        }
+      });
+
+      setSummaries(Array.from(uniqueRooms.values()));
+      setLoading(false);
+      return;
+    }
+
     const { data } = await supabase
       .from('analysis_summaries')
       .select('*')
@@ -355,10 +490,14 @@ export function useRoomSummaries() {
 
     setSummaries(Array.from(uniqueRooms.values()));
     setLoading(false);
-  }, []);
+  }, [isDemoMode, demoData]);
 
   useEffect(() => {
     fetchSummaries();
+
+    if (isDemoMode) {
+      return;
+    }
 
     const channel = supabase
       .channel('summaries-changes')
@@ -368,7 +507,7 @@ export function useRoomSummaries() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchSummaries]);
+  }, [fetchSummaries, isDemoMode]);
 
   return { summaries, loading, refetch: fetchSummaries };
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Brain,
   TrendingUp,
@@ -12,6 +13,7 @@ import {
   X,
   MessageSquare,
   Clock,
+  ArrowLeft,
 } from 'lucide-react';
 import {
   useKnowledgeGraph,
@@ -155,9 +157,18 @@ function AmbientDisplayContent() {
 }
 
 function Header({ stats, currentTime, isDemoMode }: { stats: ReturnType<typeof useAmbientStats>['stats']; currentTime: Date; isDemoMode: boolean }) {
+  const navigate = useNavigate();
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-4">
+        <button
+          onClick={() => navigate('/')}
+          className="w-12 h-12 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600/50 hover:border-slate-500 rounded-xl flex items-center justify-center transition-all hover:scale-105 group"
+          title="Back to Dashboard"
+        >
+          <ArrowLeft className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
+        </button>
         <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25">
           <Brain className="w-7 h-7 text-white" />
         </div>

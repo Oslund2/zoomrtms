@@ -124,8 +124,9 @@ class DemoDataGenerator {
   private topicEdgeIdCounter = 1;
   private insightIdCounter = 1;
   private summaryIdCounter = 1;
+  private personIdCounter = 1;
 
-  private usedNames = new Set<string>();
+  private personIdMap = new Map<string, number>();
   private topicNodes: TopicNode[] = [];
 
   generateMeetings(activeCount: number = 2, historicalCount: number = 18): Meeting[] {
@@ -403,15 +404,9 @@ class DemoDataGenerator {
   }
 
   private getRandomName(): string {
-    let name: string;
-    let attempts = 0;
-    do {
-      name = SPEAKER_NAMES[Math.floor(Math.random() * SPEAKER_NAMES.length)];
-      attempts++;
-    } while (this.usedNames.has(name) && attempts < 50);
-
-    this.usedNames.add(name);
-    return name;
+    // Generate a unique person identifier
+    const personId = this.personIdCounter++;
+    return `Person ${personId}`;
   }
 
   private getRandomTopicLabels(min: number, max: number): string[] {
@@ -430,7 +425,8 @@ class DemoDataGenerator {
   }
 
   reset() {
-    this.usedNames.clear();
+    this.personIdMap.clear();
+    this.personIdCounter = 1;
     this.topicNodes = [];
   }
 }

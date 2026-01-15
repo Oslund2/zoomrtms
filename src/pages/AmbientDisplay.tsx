@@ -208,6 +208,9 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
   const positionsRef = useRef<Map<string, { x: number; y: number; vx: number; vy: number }>>(new Map());
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const isDraggingRef = useRef(false);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -246,7 +249,10 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
       }
     });
 
-    positionsRef.current.forEach((pos) => {
+    positionsRef.current.forEach((pos, id) => {
+      // Skip physics for dragged nodes
+      if (id === draggedNodeId) return;
+
       const dx = centerX - pos.x;
       const dy = centerY - pos.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -285,19 +291,32 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
 
       const size = Math.max(20, node.size);
       const color = CATEGORY_COLORS[node.category || 'General'] || CATEGORY_COLORS.General;
+      const isHovered = node.id === hoveredNodeId;
+      const isDragged = node.id === draggedNodeId;
 
-      const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, size);
+      // Enhanced glow for hovered/dragged nodes
+      const glowSize = (isHovered || isDragged) ? size * 2 : size * 1.5;
+      const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, glowSize);
       gradient.addColorStop(0, color);
       gradient.addColorStop(1, 'transparent');
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, size * 1.5, 0, Math.PI * 2);
+      ctx.arc(pos.x, pos.y, glowSize, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, size / 2, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
+
+      // Add ring for hovered/dragged nodes
+      if (isHovered || isDragged) {
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, size / 2 + 3, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
 
       ctx.fillStyle = '#ffffff';
       ctx.font = `${Math.max(10, size / 3)}px Inter, system-ui, sans-serif`;
@@ -307,7 +326,7 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
     });
 
     animationRef.current = requestAnimationFrame(draw);
-  }, [nodes, edges]);
+  }, [nodes, edges, draggedNodeId, hoveredNodeId]);
 
   useEffect(() => {
     draw();
@@ -317,6 +336,73 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
       }
     };
   }, [draw]);
+
+  const getNodeAtPosition = useCallback((x: number, y: number): string | null => {
+    for (const node of nodes) {
+      const pos = positionsRef.current.get(node.id);
+      if (!pos) continue;
+
+      const size = Math.max(20, node.size);
+      const dx = x - pos.x;
+      const dy = y - pos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance <= size / 2 + 5) {
+        return node.id;
+      }
+    }
+    return null;
+  }, [nodes]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / 2;
+    const y = (e.clientY - rect.top) / 2;
+
+    const nodeId = getNodeAtPosition(x, y);
+    if (nodeId) {
+      setDraggedNodeId(nodeId);
+      isDraggingRef.current = true;
+    }
+  }, [getNodeAtPosition]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / 2;
+    const y = (e.clientY - rect.top) / 2;
+
+    if (isDraggingRef.current && draggedNodeId) {
+      const pos = positionsRef.current.get(draggedNodeId);
+      if (pos) {
+        pos.x = x;
+        pos.y = y;
+        pos.vx = 0;
+        pos.vy = 0;
+      }
+    } else {
+      const nodeId = getNodeAtPosition(x, y);
+      setHoveredNodeId(nodeId);
+    }
+  }, [draggedNodeId, getNodeAtPosition]);
+
+  const handleMouseUp = useCallback(() => {
+    if (draggedNodeId) {
+      setDraggedNodeId(null);
+      isDraggingRef.current = false;
+    }
+  }, [draggedNodeId]);
+
+  const handleMouseLeave = useCallback(() => {
+    setDraggedNodeId(null);
+    setHoveredNodeId(null);
+    isDraggingRef.current = false;
+  }, []);
 
   return (
     <div className="h-full bg-slate-900/50 rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden">
@@ -328,7 +414,15 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
         <span className="text-sm text-slate-400">{nodes.length} topics connected</span>
       </div>
       <div ref={containerRef} className="relative h-[calc(100%-52px)]">
-        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full"
+          style={{ cursor: draggedNodeId ? 'grabbing' : (hoveredNodeId ? 'grab' : 'default') }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+        />
         {nodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">

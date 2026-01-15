@@ -347,7 +347,8 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
       const dy = y - pos.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance <= size / 2 + 5) {
+      // Make hit area match the visual glow size for intuitive interaction
+      if (distance <= size * 1.5) {
         return node.id;
       }
     }

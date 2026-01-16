@@ -122,32 +122,33 @@ export function DemoModeProvider({ children }: { children: ReactNode }) {
 
   const updateDemoData = () => {
     setDemoData(prevData => {
-      // Add 1-2 new topic nodes
+      const activeMeetings = prevData.meetings.filter(m => m.status === 'active');
+      const activeMeetingId = activeMeetings[0]?.id || 'demo-meeting-1';
+
+      const newTranscriptCount = Math.floor(Math.random() * 3) + 2;
+      const newTranscripts = demoGenerator.generateLiveTranscripts(activeMeetingId, newTranscriptCount);
+      const allTranscripts = [...newTranscripts, ...prevData.transcripts].slice(0, 100);
+
       const newNodeCount = Math.floor(Math.random() * 2) + 1;
       const newNodes = demoGenerator.generateTopicNodes(newNodeCount);
-      const allNodes = [...prevData.topicNodes, ...newNodes].slice(-35); // Keep last 35
+      const allNodes = [...prevData.topicNodes, ...newNodes].slice(-35);
 
-      // Add new edges for new nodes
       const newEdges = demoGenerator.generateTopicEdges(allNodes);
-      const allEdges = [...prevData.topicEdges, ...newEdges].slice(-50); // Keep last 50
+      const allEdges = [...prevData.topicEdges, ...newEdges].slice(-50);
 
-      // Add 2-3 new insights
       const newInsightCount = Math.floor(Math.random() * 2) + 2;
       const newInsights = demoGenerator.generateInsightEvents(newInsightCount);
-      const allInsights = [...newInsights, ...prevData.insights].slice(0, 40); // Keep first 40 (most recent)
+      const allInsights = [...newInsights, ...prevData.insights].slice(0, 40);
 
-      // Update room summaries with slight variations
       const updatedSummaries = prevData.summaries.map(summary => ({
         ...summary,
         sentiment_score: Math.max(0.2, Math.min(0.9, summary.sentiment_score + (Math.random() - 0.5) * 0.1)),
         created_at: new Date().toISOString(),
       }));
 
-      // Randomly toggle 1-2 room statuses (simulated through updated timestamps)
-      const activeRooms = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(() => Math.random() > 0.4);
-
       return {
         ...prevData,
+        transcripts: allTranscripts,
         topicNodes: allNodes,
         topicEdges: allEdges,
         insights: allInsights,

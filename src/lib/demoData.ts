@@ -224,7 +224,7 @@ class DemoDataGenerator {
       const category = categories[Math.floor(Math.random() * categories.length)];
       const templates = TRANSCRIPT_TEMPLATES[category as keyof typeof TRANSCRIPT_TEMPLATES];
       const content = templates[Math.floor(Math.random() * templates.length)];
-      const createdAt = new Date(now.getTime() - (count - i) * 12000); // Spread over last 10 minutes
+      const createdAt = new Date(now.getTime() - (count - i) * 12000);
 
       transcripts.push({
         id: `demo-transcript-${this.transcriptIdCounter++}`,
@@ -242,6 +242,33 @@ class DemoDataGenerator {
     return transcripts.sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
+  }
+
+  generateLiveTranscripts(meetingId: string, count: number = 3): Transcript[] {
+    const transcripts: Transcript[] = [];
+    const now = new Date();
+    const categories = Object.keys(TRANSCRIPT_TEMPLATES);
+
+    for (let i = 0; i < count; i++) {
+      const category = categories[Math.floor(Math.random() * categories.length)];
+      const templates = TRANSCRIPT_TEMPLATES[category as keyof typeof TRANSCRIPT_TEMPLATES];
+      const content = templates[Math.floor(Math.random() * templates.length)];
+      const createdAt = new Date(now.getTime() - i * 2000);
+
+      transcripts.push({
+        id: `demo-transcript-${this.transcriptIdCounter++}`,
+        meeting_id: meetingId,
+        participant_id: `participant-${Math.floor(Math.random() * 12)}`,
+        speaker_name: this.getRandomName(),
+        content,
+        timestamp_ms: now.getTime() - i * 2000,
+        sequence: this.transcriptIdCounter,
+        is_final: true,
+        created_at: createdAt.toISOString(),
+      });
+    }
+
+    return transcripts;
   }
 
   generateTopicNodes(count: number = 28): TopicNode[] {

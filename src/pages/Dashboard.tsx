@@ -10,12 +10,14 @@ import {
   Mic,
   MonitorPlay,
   Filter,
-  Layers
+  Layers,
+  Zap
 } from 'lucide-react';
 import type { Meeting } from '../types/database';
 import { formatDistanceToNow } from 'date-fns';
 import RoomGrid from '../components/RoomGrid';
 import { useDashboardData } from '../hooks/useDashboardData';
+import { useDemoMode } from '../contexts/DemoModeContext';
 
 interface MeetingWithStats extends Meeting {
   participant_count: number;
@@ -26,8 +28,10 @@ type RoomFilter = 'all' | 'main' | 'breakout';
 
 export default function Dashboard() {
   const { activeMeetings, recentTranscripts, stats, loading } = useDashboardData();
+  const { isDemoMode, isPaused } = useDemoMode();
   const [roomFilter, setRoomFilter] = useState<RoomFilter>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const isLive = isDemoMode ? !isPaused : stats.activeMeetings > 0;
 
   const filteredMeetings = activeMeetings.filter((meeting) => {
     if (roomFilter === 'all') return true;
@@ -165,7 +169,15 @@ export default function Dashboard() {
         <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-slate-900">Recent Transcripts</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-slate-900">Recent Transcripts</h2>
+                {isLive && (
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-cyan-50 rounded-full">
+                    <Zap className="w-3 h-3 text-cyan-600" />
+                    <span className="text-xs font-medium text-cyan-700">Live</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {recentTranscripts.length === 0 ? (
@@ -174,9 +186,13 @@ export default function Dashboard() {
                 <p className="text-sm text-slate-500">No transcripts yet</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
-                {recentTranscripts.map((transcript) => (
-                  <div key={transcript.id} className="p-4 hover:bg-slate-50 transition-colors">
+              <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
+                {recentTranscripts.map((transcript, index) => (
+                  <div
+                    key={transcript.id}
+                    className="p-4 hover:bg-slate-50 transition-all duration-300"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <Mic className="w-4 h-4 text-cyan-600" />

@@ -57,6 +57,12 @@ Deno.serve(async (req: Request) => {
         dbParticipantId = participant?.id;
       }
 
+      const { data: meetingInfo } = await supabase
+        .from("meetings")
+        .select("room_number")
+        .eq("id", meeting.id)
+        .maybeSingle();
+
       const { data, error } = await supabase.from("transcripts").insert({
         meeting_id: meeting.id,
         participant_id: dbParticipantId,
@@ -76,6 +82,16 @@ Deno.serve(async (req: Request) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
+      }
+
+      if ((is_final ?? true) && data?.[0]?.id) {
+        await supabase.from("analysis_queue").insert({
+          transcript_id: data[0].id,
+          meeting_id: meeting.id,
+          room_number: meetingInfo?.room_number ?? 0,
+          status: "pending",
+          priority: (meetingInfo?.room_number ?? 0) === 0 ? 10 : 5,
+        });
       }
 
       return new Response(

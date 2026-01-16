@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
-import { Video, LayoutDashboard, History, Settings, Menu, X, Rocket, Brain, Monitor } from 'lucide-react';
+import { Video, LayoutDashboard, History, Settings, Menu, X, Rocket, Brain, Monitor, Activity } from 'lucide-react';
 import { useState } from 'react';
 import { useDemoMode } from '../contexts/DemoModeContext';
 
@@ -80,6 +80,13 @@ export default function Layout() {
             >
               <Monitor className="w-5 h-5" />
               <span className="font-medium">Display View</span>
+            </Link>
+            <Link
+              to="/monitor"
+              className="flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-all"
+            >
+              <Activity className="w-5 h-5" />
+              <span className="font-medium">RTMS Monitor</span>
             </Link>
           </div>
         </div>

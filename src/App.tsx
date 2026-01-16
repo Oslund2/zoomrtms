@@ -7,6 +7,7 @@ import Settings from './pages/Settings';
 import Setup from './pages/Setup';
 import AdminOrchestrator from './pages/AdminOrchestrator';
 import AmbientDisplay from './pages/AmbientDisplay';
+import RTMSMonitor from './pages/RTMSMonitor';
 import DemoModeControls from './components/DemoModeControls';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/setup" element={<Setup />} />
         <Route path="/admin" element={<AdminOrchestrator />} />
         <Route path="/display" element={<AmbientDisplay />} />
+        <Route path="/monitor" element={<RTMSMonitor />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="meeting/:id" element={<MeetingDetail />} />

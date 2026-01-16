@@ -12,25 +12,11 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
-function generateSignature(message: string, secret: string): string {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const messageData = encoder.encode(message);
-  
-  const cryptoKey = new Uint8Array(keyData);
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < messageData.length; i++) {
-    hash ^= messageData[i];
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash.toString(16);
-}
-
 async function hmacSha256(message: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
   const messageData = encoder.encode(message);
-  
+
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
     keyData,
@@ -38,10 +24,64 @@ async function hmacSha256(message: string, secret: string): Promise<string> {
     false,
     ["sign"]
   );
-  
+
   const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
   const hashArray = Array.from(new Uint8Array(signature));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyWebhookSignature(
+  req: Request,
+  body: string
+): Promise<{ valid: boolean; error?: string }> {
+  const secretToken = Deno.env.get("ZOOM_WEBHOOK_SECRET");
+
+  if (!secretToken) {
+    console.warn("ZOOM_WEBHOOK_SECRET not configured - skipping signature verification");
+    return { valid: true };
+  }
+
+  try {
+    const timestamp = req.headers.get("x-zm-request-timestamp");
+    const signature = req.headers.get("x-zm-signature");
+
+    if (!timestamp || !signature) {
+      return {
+        valid: false,
+        error: "Missing required headers: x-zm-request-timestamp or x-zm-signature"
+      };
+    }
+
+    const message = `v0:${timestamp}:${body}`;
+    const expectedSignature = `v0=${await hmacSha256(message, secretToken)}`;
+
+    const timestampDate = new Date(parseInt(timestamp) * 1000);
+    const now = new Date();
+    const timeDiff = Math.abs(now.getTime() - timestampDate.getTime());
+    const fiveMinutes = 5 * 60 * 1000;
+
+    if (timeDiff > fiveMinutes) {
+      return {
+        valid: false,
+        error: `Timestamp too old: ${timeDiff}ms > 5 minutes`
+      };
+    }
+
+    if (signature !== expectedSignature) {
+      return {
+        valid: false,
+        error: "Signature mismatch"
+      };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    console.error("Signature verification error:", error);
+    return {
+      valid: false,
+      error: `Verification failed: ${error.message}`
+    };
+  }
 }
 
 function detectRoomType(topic: string): { roomType: string; roomNumber: number | null } {
@@ -64,13 +104,14 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const body = await req.json();
+    const bodyText = await req.text();
+    const body = JSON.parse(bodyText);
     const { event, payload } = body;
 
     if (event === "endpoint.url_validation" && payload?.plainToken) {
       const secretToken = Deno.env.get("ZOOM_WEBHOOK_SECRET") ?? "";
       const encryptedToken = await hmacSha256(payload.plainToken, secretToken);
-      
+
       return new Response(
         JSON.stringify({
           plainToken: payload.plainToken,
@@ -81,6 +122,18 @@ Deno.serve(async (req: Request) => {
             ...corsHeaders,
             "Content-Type": "application/json",
           },
+        }
+      );
+    }
+
+    const verification = await verifyWebhookSignature(req, bodyText);
+    if (!verification.valid) {
+      console.error(`Webhook signature verification failed: ${verification.error}`);
+      return new Response(
+        JSON.stringify({ error: "Invalid signature", details: verification.error }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }

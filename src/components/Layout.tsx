@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
-import { Video, LayoutDashboard, History, Settings, Menu, X, Rocket, Brain, Monitor, Activity } from 'lucide-react';
+import { Video, LayoutDashboard, History, Code, Menu, X, Brain, Monitor, Activity } from 'lucide-react';
 import { useState } from 'react';
 import { useDemoMode } from '../contexts/DemoModeContext';
 
@@ -16,7 +16,7 @@ export default function Layout() {
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/history', icon: History, label: 'Meeting History' },
-    { to: '/settings', icon: Settings, label: 'Settings' },
+    { to: '/settings', icon: Code, label: 'Developer' },
   ];
 
   return (
@@ -106,13 +106,6 @@ export default function Layout() {
             <p className="text-xs text-slate-400">
               Webhook endpoint ready for incoming RTMS events
             </p>
-            <Link
-              to="/setup"
-              className="flex items-center gap-1.5 mt-3 pt-3 border-t border-slate-700 text-slate-500 hover:text-slate-400 transition-colors"
-            >
-              <Rocket className="w-3 h-3" />
-              <span className="text-[10px]">Setup</span>
-            </Link>
           </div>
         </div>
       </aside>

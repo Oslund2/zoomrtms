@@ -1,10 +1,9 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import MeetingDetail from './pages/MeetingDetail';
 import MeetingHistory from './pages/MeetingHistory';
 import Settings from './pages/Settings';
-import Setup from './pages/Setup';
 import AdminOrchestrator from './pages/AdminOrchestrator';
 import AmbientDisplay from './pages/AmbientDisplay';
 import RTMSMonitor from './pages/RTMSMonitor';
@@ -14,7 +13,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/setup" element={<Setup />} />
+        <Route path="/setup" element={<Navigate to="/settings?tab=setup" replace />} />
         <Route path="/admin" element={<AdminOrchestrator />} />
         <Route path="/display" element={<AmbientDisplay />} />
         <Route path="/monitor" element={<RTMSMonitor />} />

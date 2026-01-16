@@ -22,6 +22,7 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [existingIconUrl, setExistingIconUrl] = useState<string | null>(null);
   const [removeIcon, setRemoveIcon] = useState(false);
+  const [occupiedRooms, setOccupiedRooms] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditMode = !!editMeeting;
@@ -47,6 +48,33 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
     setIconFile(null);
     setIconPreview(null);
   }, [editMeeting, isOpen]);
+
+  useEffect(() => {
+    const fetchOccupiedRooms = async () => {
+      if (!isOpen) return;
+
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('room_number')
+        .eq('room_type', 'breakout')
+        .eq('status', 'active')
+        .not('room_number', 'is', null);
+
+      if (!error && data) {
+        const occupied = new Set<number>();
+        data.forEach((meeting) => {
+          if (meeting.room_number !== null) {
+            if (!editMeeting || meeting.room_number !== editMeeting.room_number) {
+              occupied.add(meeting.room_number);
+            }
+          }
+        });
+        setOccupiedRooms(occupied);
+      }
+    };
+
+    fetchOccupiedRooms();
+  }, [isOpen, editMeeting]);
 
   const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -388,11 +416,18 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
                 onChange={(e) => setRoomNumber(parseInt(e.target.value))}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
               >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                  <option key={num} value={num}>
-                    Breakout Room {num}
-                  </option>
-                ))}
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => {
+                  const isOccupied = occupiedRooms.has(num);
+                  return (
+                    <option
+                      key={num}
+                      value={num}
+                      className={isOccupied ? 'text-slate-400' : ''}
+                    >
+                      Breakout Room {num}{isOccupied ? ' (In Use)' : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           )}

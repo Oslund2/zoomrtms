@@ -180,11 +180,11 @@ function RoomSlot({
   if (!room) {
     return (
       <div className="bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 p-4 flex flex-col items-center justify-center min-h-[140px]">
-        <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center mb-2">
-          <AudioWaveform className="w-5 h-5 text-slate-400" />
+        <div className="w-10 h-10 bg-slate-300 rounded-lg flex items-center justify-center mb-2">
+          <AudioWaveform className="w-5 h-5 text-slate-500" />
         </div>
-        <span className="text-sm font-medium text-slate-400">Breakout {roomNumber}</span>
-        <span className="text-xs text-slate-400 mt-1">Waiting...</span>
+        <span className="text-sm font-medium text-slate-600">Breakout {roomNumber}</span>
+        <span className="text-xs text-slate-500 mt-1">Waiting...</span>
       </div>
     );
   }

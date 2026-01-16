@@ -158,6 +158,7 @@ export default function AdminOrchestrator() {
                 onClick={handleProcessQueue}
                 disabled={processing}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                title="Manually trigger AI analysis of pending meeting transcripts. The system will analyze all unprocessed transcripts and generate insights, summaries, and detect misalignments based on your configured prompts and external context documents."
               >
                 <RefreshCw className={`w-4 h-4 ${processing ? 'animate-spin' : ''}`} />
                 Process Queue

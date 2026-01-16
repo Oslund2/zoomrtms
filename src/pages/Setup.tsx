@@ -15,15 +15,21 @@ import {
   Zap,
   Download,
   ArrowLeft,
-  X
+  Terminal,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import {
   generateNodeJSRTMSClient,
   generateEnvTemplate,
   generateNpmInstallCommand,
   generateCurlTestCommand,
+  generatePowerShellTestCommand,
+  generateCurlChatCommand,
+  generateCurlParticipantCommand,
   generateWebhookTestPayload
 } from '../lib/codeGenerator';
+import { supabase } from '../lib/supabase';
 
 interface SetupState {
   clientId: string;
@@ -810,8 +816,83 @@ function Step6Test({
   onCopy: (text: string, key: string) => void;
   copied: string | null;
 }) {
-  const curlCommand = generateCurlTestCommand(dataUrl);
-  const webhookPayload = generateWebhookTestPayload();
+  const [testMeetingId, setTestMeetingId] = useState<string | null>(null);
+  const [testMeetingUuid, setTestMeetingUuid] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [shellType, setShellType] = useState<'curl' | 'powershell'>('curl');
+  const [commandType, setCommandType] = useState<'transcript' | 'chat' | 'participant'>('transcript');
+
+  const createTestMeeting = async () => {
+    setIsCreating(true);
+    setCreateError(null);
+
+    try {
+      const meetingUuid = crypto.randomUUID();
+      const { data, error } = await supabase
+        .from('meetings')
+        .insert({
+          meeting_uuid: meetingUuid,
+          topic: `Test Meeting - Setup Wizard ${new Date().toLocaleString()}`,
+          host_name: 'Setup Wizard',
+          status: 'active',
+          room_type: 'main',
+          started_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setTestMeetingId(data.id);
+      setTestMeetingUuid(data.meeting_uuid);
+
+      localStorage.setItem('rtms_test_meeting', JSON.stringify({
+        id: data.id,
+        meeting_uuid: data.meeting_uuid,
+        created_at: new Date().toISOString()
+      }));
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create test meeting');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('rtms_test_meeting');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const createdAt = new Date(parsed.created_at);
+        const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+        if (createdAt > hourAgo) {
+          setTestMeetingId(parsed.id);
+          setTestMeetingUuid(parsed.meeting_uuid);
+          return;
+        }
+      } catch (e) {}
+    }
+    createTestMeeting();
+  }, []);
+
+  const getCommand = () => {
+    if (shellType === 'curl') {
+      switch (commandType) {
+        case 'transcript':
+          return generateCurlTestCommand(dataUrl, testMeetingUuid || undefined);
+        case 'chat':
+          return generateCurlChatCommand(dataUrl, testMeetingUuid || undefined);
+        case 'participant':
+          return generateCurlParticipantCommand(dataUrl, testMeetingUuid || undefined);
+      }
+    } else {
+      return generatePowerShellTestCommand(dataUrl, testMeetingUuid || undefined);
+    }
+  };
+
+  const command = getCommand();
 
   return (
     <div className="space-y-6">
@@ -833,25 +914,148 @@ function Step6Test({
           </p>
         </div>
 
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Zap className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-blue-900">Test Meeting Created</h3>
+                <p className="text-sm text-blue-700">
+                  {testMeetingUuid ? 'Ready for testing' : isCreating ? 'Creating...' : 'No test meeting'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={createTestMeeting}
+              disabled={isCreating}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              {isCreating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {isCreating ? 'Creating...' : 'New Test Meeting'}
+            </button>
+          </div>
+
+          {createError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-3">
+              <p className="text-sm text-red-700">{createError}</p>
+            </div>
+          )}
+
+          {testMeetingUuid && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-blue-700 font-medium">Meeting UUID:</span>
+              <code className="flex-1 px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm font-mono text-blue-900 truncate">
+                {testMeetingUuid}
+              </code>
+              <button
+                onClick={() => onCopy(testMeetingUuid, 'meeting-uuid')}
+                className="flex-shrink-0 p-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
+              >
+                {copied === 'meeting-uuid' ? (
+                  <Check className="w-4 h-4 text-emerald-500" />
+                ) : (
+                  <Copy className="w-4 h-4 text-blue-600" />
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="p-4 bg-slate-50 rounded-xl">
           <h3 className="font-semibold text-slate-900 mb-3">Test Data Ingestion</h3>
+
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1">
+              <button
+                onClick={() => setShellType('curl')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  shellType === 'curl'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                CURL (Bash)
+              </button>
+              <button
+                onClick={() => setShellType('powershell')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  shellType === 'powershell'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                PowerShell
+              </button>
+            </div>
+
+            {shellType === 'curl' && (
+              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1">
+                <button
+                  onClick={() => setCommandType('transcript')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    commandType === 'transcript'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Transcript
+                </button>
+                <button
+                  onClick={() => setCommandType('chat')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    commandType === 'chat'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Chat
+                </button>
+                <button
+                  onClick={() => setCommandType('participant')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    commandType === 'participant'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Participant
+                </button>
+              </div>
+            )}
+          </div>
+
           <p className="text-sm text-slate-600 mb-3">
-            Run this curl command to test your data ingestion endpoint:
+            {shellType === 'curl'
+              ? `Test ${commandType} data ingestion with this command:`
+              : 'Test transcript data ingestion with PowerShell:'}
           </p>
+
           <div className="flex items-start gap-2 mb-2">
-            <pre className="flex-1 p-3 bg-slate-900 text-slate-100 rounded-lg overflow-x-auto text-xs font-mono">
-              {curlCommand}
+            <pre className="flex-1 p-3 bg-slate-900 text-slate-100 rounded-lg overflow-x-auto text-xs font-mono whitespace-pre-wrap">
+              {command}
             </pre>
             <button
-              onClick={() => onCopy(curlCommand, 'curl')}
+              onClick={() => onCopy(command, `${shellType}-${commandType}`)}
               className="flex-shrink-0 p-2 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors"
             >
-              {copied === 'curl' ? (
+              {copied === `${shellType}-${commandType}` ? (
                 <Check className="w-4 h-4 text-emerald-500" />
               ) : (
                 <Copy className="w-4 h-4 text-slate-600" />
               )}
             </button>
+          </div>
+
+          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-xs text-amber-800">
+              <strong>Expected Response:</strong> {"{ \"success\": true, \"message\": \"Data received\" }"}
+            </p>
           </div>
         </div>
 
@@ -862,25 +1066,25 @@ function Step6Test({
               <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                 1
               </span>
-              <span>Start your RTMS client with: <code className="bg-slate-200 px-1 rounded">node rtms-client.js</code></span>
+              <span>Run the test commands above to verify data flows to the dashboard</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                 2
               </span>
-              <span>Start a Zoom meeting with RTMS enabled</span>
+              <span>Start your RTMS client with: <code className="bg-slate-200 px-1 rounded">node rtms-client.js</code></span>
             </li>
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                 3
               </span>
-              <span>Watch the dashboard for real-time meeting data</span>
+              <span>Start a Zoom meeting with RTMS enabled</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                 4
               </span>
-              <span>Create breakout rooms and see them appear as separate streams</span>
+              <span>Watch the dashboard for real-time meeting data</span>
             </li>
           </ol>
         </div>

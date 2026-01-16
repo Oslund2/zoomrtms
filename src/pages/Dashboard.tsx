@@ -11,11 +11,13 @@ import {
   MonitorPlay,
   Filter,
   Layers,
-  Zap
+  Zap,
+  Plus
 } from 'lucide-react';
 import type { Meeting } from '../types/database';
 import { formatDistanceToNow } from 'date-fns';
 import RoomGrid from '../components/RoomGrid';
+import MeetingCreateModal from '../components/MeetingCreateModal';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useDemoMode } from '../contexts/DemoModeContext';
 
@@ -27,11 +29,19 @@ interface MeetingWithStats extends Meeting {
 type RoomFilter = 'all' | 'main' | 'breakout';
 
 export default function Dashboard() {
-  const { activeMeetings, recentTranscripts, stats, loading } = useDashboardData();
+  const { activeMeetings, recentTranscripts, stats, loading, refetch } = useDashboardData();
   const { isDemoMode, isPaused } = useDemoMode();
   const [roomFilter, setRoomFilter] = useState<RoomFilter>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const isLive = isDemoMode ? !isPaused : stats.activeMeetings > 0;
+
+  const handleMeetingCreated = (meeting: { id: string; meeting_uuid: string; topic: string }) => {
+    setSuccessMessage(`Meeting "${meeting.topic}" created successfully`);
+    setTimeout(() => setSuccessMessage(null), 4000);
+    refetch();
+  };
 
   const filteredMeetings = activeMeetings.filter((meeting) => {
     if (roomFilter === 'all') return true;
@@ -45,9 +55,35 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 lg:p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 mt-1">Monitor your Zoom RTMS streams in real-time</p>
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl shadow-lg">
+            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <Video className="w-4 h-4 text-emerald-600" />
+            </div>
+            <p className="text-sm font-medium text-emerald-800">{successMessage}</p>
+          </div>
+        </div>
+      )}
+
+      <MeetingCreateModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleMeetingCreated}
+      />
+
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-500 mt-1">Monitor your Zoom RTMS streams in real-time</p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-sm"
+        >
+          <Plus className="w-5 h-5" />
+          <span className="hidden sm:inline">New Meeting</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

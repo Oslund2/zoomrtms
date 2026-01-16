@@ -548,16 +548,61 @@ export function generateNpmInstallCommand(): string {
   return 'npm install @zoom/rtms node-fetch';
 }
 
-export function generateCurlTestCommand(endpoint: string): string {
+export function generateCurlTestCommand(endpoint: string, meetingUuid?: string): string {
+  const uuid = meetingUuid || 'test-meeting-123';
   return `curl -X POST '${endpoint}/transcript' \\
   -H 'Content-Type: application/json' \\
   -d '{
     "type": "transcript",
-    "meeting_uuid": "test-meeting-123",
+    "meeting_uuid": "${uuid}",
     "speaker_name": "Test Speaker",
     "content": "This is a test transcript",
     "timestamp_ms": ${Date.now()},
     "is_final": true
+  }'`;
+}
+
+export function generatePowerShellTestCommand(endpoint: string, meetingUuid?: string): string {
+  const uuid = meetingUuid || 'test-meeting-123';
+  return `$body = @{
+    type = "transcript"
+    meeting_uuid = "${uuid}"
+    speaker_name = "Test Speaker"
+    content = "This is a test transcript"
+    timestamp_ms = [long](Get-Date -UFormat %s) * 1000
+    is_final = $true
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "${endpoint}/transcript" \`
+    -Method POST \`
+    -ContentType "application/json" \`
+    -Body $body`;
+}
+
+export function generateCurlChatCommand(endpoint: string, meetingUuid?: string): string {
+  const uuid = meetingUuid || 'test-meeting-123';
+  return `curl -X POST '${endpoint}/chat' \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    "type": "chat",
+    "meeting_uuid": "${uuid}",
+    "sender_name": "Test User",
+    "message": "Hello from the test!",
+    "timestamp_ms": ${Date.now()}
+  }'`;
+}
+
+export function generateCurlParticipantCommand(endpoint: string, meetingUuid?: string): string {
+  const uuid = meetingUuid || 'test-meeting-123';
+  return `curl -X POST '${endpoint}/participant' \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    "type": "participant",
+    "meeting_uuid": "${uuid}",
+    "action": "joined",
+    "participant_id": "test-participant-001",
+    "user_name": "Test Participant",
+    "role": "attendee"
   }'`;
 }
 

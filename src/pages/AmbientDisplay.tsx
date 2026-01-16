@@ -53,6 +53,7 @@ function AmbientDisplayContent() {
   const { selectedTopic, selectedRoom, clearAllFilters } = useAmbientSelection();
 
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [mobileTab, setMobileTab] = useState<'graph' | 'heatmap' | 'insights'>('insights');
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -84,52 +85,72 @@ function AmbientDisplayContent() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent" />
 
       {!isDemoMode && stats.activeRooms === 0 && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 max-w-md text-center shadow-2xl">
-            <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Brain className="w-8 h-8 text-blue-400" />
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 max-w-md text-center shadow-2xl">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400" />
             </div>
-            <h2 className="text-2xl font-bold mb-3">No Active Data</h2>
-            <p className="text-slate-400 mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold mb-3">No Active Data</h2>
+            <p className="text-slate-400 mb-4 sm:mb-6 text-sm sm:text-base">
               Enable Demo Mode to see the Ambient Intelligence display with synthetic meeting data.
             </p>
-            <p className="text-sm text-slate-500 mb-4">
-              Look for the Demo Mode controls in the bottom-right corner or press <kbd className="px-2 py-1 bg-slate-800 border border-slate-600 rounded text-xs">D</kbd> on your keyboard.
+            <p className="text-xs sm:text-sm text-slate-500">
+              Look for the Demo Mode controls in the bottom-right corner.
             </p>
           </div>
         </div>
       )}
 
-      <div className="relative h-full flex flex-col p-6">
+      <div className="relative h-full flex flex-col p-3 sm:p-4 lg:p-6 pb-safe">
         <Header stats={stats} currentTime={currentTime} isDemoMode={isDemoMode} />
 
         {hasActiveFilters && (
-          <div className="mt-4 flex items-center gap-3 px-4 py-3 bg-blue-500/10 border border-blue-400/30 rounded-xl">
-            <Target className="w-4 h-4 text-blue-400" />
-            <div className="flex items-center gap-2 flex-1">
-              <span className="text-sm text-blue-300">Active Filters:</span>
+          <div className="mt-3 sm:mt-4 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-blue-500/10 border border-blue-400/30 rounded-lg sm:rounded-xl">
+            <Target className="w-4 h-4 text-blue-400 flex-shrink-0" />
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-1 overflow-x-auto">
               {selectedTopic && (
-                <span className="px-3 py-1 bg-blue-500/20 border border-blue-400/30 rounded-lg text-sm text-white">
-                  Topic: {selectedTopic.label}
+                <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-500/20 border border-blue-400/30 rounded-lg text-xs sm:text-sm text-white whitespace-nowrap">
+                  {selectedTopic.label}
                 </span>
               )}
               {selectedRoom !== null && (
-                <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-sm text-white">
-                  Room: {selectedRoom === 0 ? 'Main' : `R${selectedRoom}`}
+                <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-xs sm:text-sm text-white whitespace-nowrap">
+                  {selectedRoom === 0 ? 'Main' : `R${selectedRoom}`}
                 </span>
               )}
             </div>
             <button
               onClick={clearAllFilters}
-              className="px-3 py-1.5 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 rounded-lg text-sm text-white transition-colors flex items-center gap-2"
+              className="p-1.5 sm:px-3 sm:py-1.5 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 rounded-lg text-xs sm:text-sm text-white transition-colors flex items-center gap-1 sm:gap-2 flex-shrink-0"
             >
-              <X className="w-3 h-3" />
-              Clear All
+              <X className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Clear</span>
             </button>
           </div>
         )}
 
-        <div className="flex-1 grid grid-cols-12 gap-6 min-h-0 mt-6">
+        <div className="lg:hidden flex items-center gap-1 mt-3 bg-slate-800/50 p-1 rounded-xl">
+          {[
+            { id: 'insights', label: 'Insights', icon: Lightbulb },
+            { id: 'graph', label: 'Network', icon: Zap },
+            { id: 'heatmap', label: 'Heatmap', icon: Target },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setMobileTab(tab.id as typeof mobileTab)}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors ${
+                mobileTab === tab.id
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="hidden lg:grid flex-1 grid-cols-12 gap-6 min-h-0 mt-6">
           <div className="col-span-5 flex flex-col gap-6 min-h-0">
             <div className="flex-1 min-h-0">
               <KnowledgeGraphPanel nodes={nodes} edges={edges} />
@@ -150,6 +171,18 @@ function AmbientDisplayContent() {
           </div>
         </div>
 
+        <div className="lg:hidden flex-1 min-h-0 mt-3 flex flex-col">
+          <div className="mb-3">
+            <MobileRoomStatusBar stats={stats} summaries={summaries} />
+          </div>
+
+          <div className="flex-1 min-h-0">
+            {mobileTab === 'insights' && <InsightsFeed insights={insights} />}
+            {mobileTab === 'graph' && <KnowledgeGraphPanel nodes={nodes} edges={edges} />}
+            {mobileTab === 'heatmap' && <HeatmapPanel data={heatmapData} categories={categories} />}
+          </div>
+        </div>
+
         <Footer stats={stats} />
       </div>
     </div>
@@ -160,68 +193,102 @@ function Header({ stats, currentTime, isDemoMode }: { stats: ReturnType<typeof u
   const navigate = useNavigate();
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex items-center gap-2 sm:gap-4">
         <button
           onClick={() => navigate('/')}
-          className="w-12 h-12 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600/50 hover:border-slate-500 rounded-xl flex items-center justify-center transition-all hover:scale-105 group"
+          className="w-9 h-9 sm:w-12 sm:h-12 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600/50 hover:border-slate-500 rounded-lg sm:rounded-xl flex items-center justify-center transition-all hover:scale-105 group flex-shrink-0"
           title="Back to Dashboard"
         >
-          <ArrowLeft className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 group-hover:text-white transition-colors" />
         </button>
-        <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25">
-          <Brain className="w-7 h-7 text-white" />
+        <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 flex-shrink-0">
+          <Brain className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
         </div>
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Ambient Intelligence</h1>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight truncate">Ambient Intelligence</h1>
             {isDemoMode && (
-              <span className="px-3 py-1 bg-blue-500/20 border border-blue-400/30 rounded-full text-xs font-semibold text-blue-300 uppercase tracking-wider">
-                Demo Mode
+              <span className="hidden sm:inline px-3 py-1 bg-blue-500/20 border border-blue-400/30 rounded-full text-xs font-semibold text-blue-300 uppercase tracking-wider">
+                Demo
               </span>
             )}
           </div>
-          <p className="text-blue-300/80 text-sm">Company Transformation Event - Live Analysis</p>
+          <p className="text-blue-300/80 text-xs sm:text-sm truncate">
+            {isDemoMode && <span className="sm:hidden text-blue-300">[Demo] </span>}
+            <span className="hidden sm:inline">Company Transformation Event - </span>Live Analysis
+          </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-6">
-          <StatPill
+      <div className="flex items-center gap-3 sm:gap-8">
+        <div className="flex items-center gap-2 sm:gap-6 overflow-x-auto pb-1 sm:pb-0 -mx-3 px-3 sm:mx-0 sm:px-0 flex-1 sm:flex-none">
+          <MiniStatPill
             icon={Activity}
-            label="Active Rooms"
+            label="Rooms"
             value={stats.activeRooms}
             color="emerald"
             pulse
           />
-          <StatPill
+          <MiniStatPill
             icon={Brain}
             label="Topics"
             value={stats.totalTopics}
             color="blue"
           />
-          <StatPill
+          <MiniStatPill
             icon={CheckCircle}
-            label="Alignments"
+            label="Aligned"
             value={stats.alignments}
             color="cyan"
           />
-          <StatPill
+          <MiniStatPill
             icon={AlertTriangle}
-            label="Misalignments"
+            label="Issues"
             value={stats.misalignments}
             color="amber"
           />
         </div>
 
-        <div className="text-right">
-          <div className="text-3xl font-light text-white tabular-nums">
+        <div className="text-right flex-shrink-0 hidden sm:block">
+          <div className="text-2xl lg:text-3xl font-light text-white tabular-nums">
             {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
           </div>
-          <div className="text-sm text-slate-400">
-            {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+          <div className="text-xs lg:text-sm text-slate-400">
+            {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniStatPill({
+  icon: Icon,
+  label,
+  value,
+  color,
+  pulse,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number;
+  color: 'emerald' | 'blue' | 'cyan' | 'amber';
+  pulse?: boolean;
+}) {
+  const colorClasses = {
+    emerald: 'text-emerald-400',
+    blue: 'text-blue-400',
+    cyan: 'text-cyan-400',
+    amber: 'text-amber-400',
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+      <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${colorClasses[color]} ${pulse ? 'animate-pulse' : ''}`} />
+      <div className="flex items-baseline gap-1 sm:flex-col sm:gap-0">
+        <span className="text-sm sm:text-lg font-bold text-white">{value}</span>
+        <span className="text-[10px] sm:text-xs text-slate-400 uppercase hidden sm:block">{label}</span>
       </div>
     </div>
   );
@@ -512,31 +579,106 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
     isDraggingRef.current = false;
   }, []);
 
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * (canvas.width / rect.width / 2);
+    const y = (touch.clientY - rect.top) * (canvas.height / rect.height / 2);
+
+    clickStartPos.current = { x, y };
+
+    const nodeId = getNodeAtPosition(x, y);
+    if (nodeId) {
+      setDraggedNodeId(nodeId);
+      isDraggingRef.current = false;
+    }
+  }, [getNodeAtPosition]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * (canvas.width / rect.width / 2);
+    const y = (touch.clientY - rect.top) * (canvas.height / rect.height / 2);
+
+    if (draggedNodeId && clickStartPos.current) {
+      const dx = x - clickStartPos.current.x;
+      const dy = y - clickStartPos.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > 10) {
+        isDraggingRef.current = true;
+        e.preventDefault();
+      }
+
+      if (isDraggingRef.current) {
+        const pos = positionsRef.current.get(draggedNodeId);
+        if (pos) {
+          pos.x = x;
+          pos.y = y;
+          pos.vx = 0;
+          pos.vy = 0;
+        }
+      }
+    }
+  }, [draggedNodeId]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (draggedNodeId) {
+      if (!isDraggingRef.current) {
+        const node = nodes.find(n => n.id === draggedNodeId);
+        if (node) {
+          if (selectedTopic?.id === node.id) {
+            setSelectedTopic(null);
+          } else {
+            setSelectedTopic({
+              id: node.id,
+              label: node.label,
+              category: node.category,
+              roomMentions: node.roomMentions,
+            });
+          }
+        }
+      }
+      setDraggedNodeId(null);
+      isDraggingRef.current = false;
+    }
+    clickStartPos.current = null;
+  }, [draggedNodeId, nodes, selectedTopic, setSelectedTopic]);
+
   return (
-    <div className="h-full bg-slate-900/50 rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-700/50 flex items-center justify-between">
+    <div className="h-full bg-slate-900/50 rounded-xl sm:rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden">
+      <div className="px-3 sm:px-5 py-2 sm:py-3 border-b border-slate-700/50 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-blue-400" />
-          <h2 className="text-lg font-semibold text-white">Knowledge Network</h2>
+          <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+          <h2 className="text-sm sm:text-lg font-semibold text-white">Knowledge Network</h2>
         </div>
-        <span className="text-sm text-slate-400">{nodes.length} topics connected</span>
+        <span className="text-xs sm:text-sm text-slate-400">{nodes.length} topics</span>
       </div>
-      <div ref={containerRef} className="relative h-[calc(100%-52px)]">
+      <div ref={containerRef} className="relative h-[calc(100%-40px)] sm:h-[calc(100%-52px)]">
         <canvas
           ref={canvasRef}
-          className="absolute inset-0 w-full h-full"
+          className="absolute inset-0 w-full h-full touch-none"
           style={{ cursor: draggedNodeId ? 'grabbing' : (hoveredNodeId ? 'grab' : 'default') }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         />
         {nodes.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center p-4">
             <div className="text-center">
-              <Brain className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-400">Analyzing discussions...</p>
-              <p className="text-sm text-slate-500">Topics will appear as they're detected</p>
+              <Brain className="w-10 h-10 sm:w-16 sm:h-16 text-slate-600 mx-auto mb-3 sm:mb-4" />
+              <p className="text-slate-400 text-sm sm:text-base">Analyzing discussions...</p>
+              <p className="text-xs sm:text-sm text-slate-500">Topics will appear as they're detected</p>
             </div>
           </div>
         )}
@@ -551,14 +693,14 @@ function HeatmapPanel({ data, categories }: { data: { room: number; category: st
   const { selectedTopic, selectedRoom, setSelectedRoom } = useAmbientSelection();
 
   return (
-    <div className="h-full bg-slate-900/50 rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-700/50 flex items-center gap-2">
-        <Target className="w-5 h-5 text-cyan-400" />
-        <h2 className="text-lg font-semibold text-white">Topic Heat Map</h2>
+    <div className="h-full bg-slate-900/50 rounded-xl sm:rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden">
+      <div className="px-3 sm:px-5 py-2 sm:py-3 border-b border-slate-700/50 flex items-center gap-2">
+        <Target className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+        <h2 className="text-sm sm:text-lg font-semibold text-white">Topic Heat Map</h2>
       </div>
 
-      <div className="p-4 h-[calc(100%-52px)] overflow-auto">
-        <div className="grid gap-1" style={{ gridTemplateColumns: `80px repeat(${rooms.length}, 1fr)` }}>
+      <div className="p-2 sm:p-4 h-[calc(100%-40px)] sm:h-[calc(100%-52px)] overflow-auto">
+        <div className="grid gap-0.5 sm:gap-1" style={{ gridTemplateColumns: `60px repeat(${rooms.length}, 1fr)` }}>
           <div />
           {rooms.map((room) => (
             <div key={room} className="text-center text-xs font-medium text-slate-400 pb-2">
@@ -775,34 +917,34 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
   };
 
   return (
-    <div className="h-full bg-slate-900/50 rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden flex flex-col">
-      <div className="px-5 py-3 border-b border-slate-700/50 flex items-center justify-between">
+    <div className="h-full bg-slate-900/50 rounded-xl sm:rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden flex flex-col">
+      <div className="px-3 sm:px-5 py-2 sm:py-3 border-b border-slate-700/50 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Lightbulb className="w-5 h-5 text-amber-400" />
-          <h2 className="text-lg font-semibold text-white">Live Insights</h2>
+          <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+          <h2 className="text-sm sm:text-lg font-semibold text-white">Live Insights</h2>
         </div>
         {(selectedTopic || selectedRoom !== null) && (
-          <span className="px-2 py-1 bg-blue-500/20 border border-blue-400/30 rounded-lg text-xs text-blue-300">
-            {filteredInsights.length} of {insights.length}
+          <span className="px-2 py-0.5 sm:py-1 bg-blue-500/20 border border-blue-400/30 rounded-lg text-[10px] sm:text-xs text-blue-300">
+            {filteredInsights.length}/{insights.length}
           </span>
         )}
       </div>
 
-      <div ref={feedRef} className="flex-1 overflow-hidden p-4 space-y-3" onWheel={handleScroll}>
+      <div ref={feedRef} className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-3" onWheel={handleScroll} onTouchStart={() => setAutoScroll(false)}>
         {filteredInsights.length === 0 && insights.length > 0 ? (
           <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <Target className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400">No insights match current filters</p>
-              <p className="text-sm text-slate-500">Try selecting a different topic or room</p>
+            <div className="text-center p-4">
+              <Target className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400 text-sm sm:text-base">No insights match filters</p>
+              <p className="text-xs sm:text-sm text-slate-500">Try a different selection</p>
             </div>
           </div>
         ) : insights.length === 0 ? (
           <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <Lightbulb className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400">Generating insights...</p>
-              <p className="text-sm text-slate-500">Cross-room patterns will appear here</p>
+            <div className="text-center p-4">
+              <Lightbulb className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400 text-sm sm:text-base">Generating insights...</p>
+              <p className="text-xs sm:text-sm text-slate-500">Patterns will appear here</p>
             </div>
           </div>
         ) : (
@@ -812,43 +954,43 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
             return (
               <div
                 key={insight.id}
-                className={`p-4 rounded-xl border ${getInsightColors(insight.insight_type, insight.severity)} transition-all ${
+                className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border ${getInsightColors(insight.insight_type, insight.severity)} transition-all ${
                   hasMatchingTopic ? 'ring-2 ring-blue-400/50' : ''
                 }`}
               >
-                <div className="flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     insight.insight_type === 'misalignment' ? 'bg-amber-500/20 text-amber-400' :
                     insight.insight_type === 'alignment' ? 'bg-emerald-500/20 text-emerald-400' :
                     'bg-blue-500/20 text-blue-400'
                   }`}>
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-white text-sm leading-tight mb-1">
+                    <h4 className="font-semibold text-white text-xs sm:text-sm leading-tight mb-1">
                       {insight.title}
                     </h4>
-                    <p className="text-xs text-slate-300 line-clamp-2">
+                    <p className="text-[10px] sm:text-xs text-slate-300 line-clamp-2">
                       {insight.description}
                     </p>
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1.5 sm:mt-2 flex-wrap">
                       {insight.involved_rooms && insight.involved_rooms.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          {insight.involved_rooms.map((room) => (
-                            <span key={room} className={`px-1.5 py-0.5 text-xs rounded ${
+                        <div className="flex items-center gap-0.5 sm:gap-1">
+                          {insight.involved_rooms.slice(0, 4).map((room) => (
+                            <span key={room} className={`px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs rounded ${
                               selectedRoom === room
                                 ? 'bg-emerald-500/30 border border-emerald-400/50 text-emerald-300'
                                 : 'bg-slate-700/50 text-slate-300'
                             }`}>
-                              {room === 0 ? 'Main' : `R${room}`}
+                              {room === 0 ? 'M' : room}
                             </span>
                           ))}
                         </div>
                       )}
                       {hasMatchingTopic && (
-                        <span className="px-2 py-0.5 bg-blue-500/20 border border-blue-400/40 text-xs text-blue-300 rounded flex items-center gap-1">
-                          <Target className="w-3 h-3" />
-                          {selectedTopic.label}
+                        <span className="px-1.5 sm:px-2 py-0.5 bg-blue-500/20 border border-blue-400/40 text-[10px] sm:text-xs text-blue-300 rounded flex items-center gap-0.5 sm:gap-1">
+                          <Target className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                          <span className="truncate max-w-[60px] sm:max-w-none">{selectedTopic.label}</span>
                         </span>
                       )}
                     </div>
@@ -863,16 +1005,49 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
   );
 }
 
+function MobileRoomStatusBar({ stats, summaries }: { stats: ReturnType<typeof useAmbientStats>['stats']; summaries: ReturnType<typeof useRoomSummaries>['summaries'] }) {
+  const allRooms = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  const { selectedRoom, setSelectedRoom } = useAmbientSelection();
+
+  return (
+    <div className="bg-slate-900/50 rounded-xl border border-slate-700/50 p-2">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-2 px-2">
+        {allRooms.map((roomNumber) => {
+          const isActive = roomNumber === 0 ? stats.roomStatus.main : stats.roomStatus.breakout.includes(roomNumber);
+          const isSelected = selectedRoom === roomNumber;
+
+          return (
+            <button
+              key={roomNumber}
+              onClick={() => setSelectedRoom(isSelected ? null : roomNumber)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${
+                isSelected
+                  ? 'bg-blue-500/30 border border-blue-400 text-white'
+                  : isActive
+                  ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
+                  : 'bg-slate-800/50 border border-slate-700/30 text-slate-500'
+              }`}
+            >
+              {isActive && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+              <span>{roomNumber === 0 ? 'Main' : `R${roomNumber}`}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Footer({ stats }: { stats: ReturnType<typeof useAmbientStats>['stats'] }) {
   return (
-    <div className="mt-6 flex items-center justify-between text-sm text-slate-500">
+    <div className="hidden lg:flex mt-6 items-center justify-between text-sm text-slate-500">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
           <span>Real-time Analysis Active</span>
         </div>
-        <span>Click topics to filter • Click rooms to focus</span>
-        <span>Press F for fullscreen • ESC to clear filters</span>
+        <span>Click topics to filter</span>
+        <span>Press F for fullscreen</span>
       </div>
       <div className="flex items-center gap-4">
         {Object.entries(CATEGORY_COLORS).slice(0, 5).map(([name, color]) => (

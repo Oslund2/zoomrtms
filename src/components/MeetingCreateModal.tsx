@@ -1,65 +1,116 @@
-import { useState } from 'react';
-import { X, Video, Loader2, CheckCircle2, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Video, Loader2, CheckCircle2, Users, Pencil } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import type { Meeting } from '../types/database';
 
 interface MeetingCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (meeting: { id: string; meeting_uuid: string; topic: string }) => void;
+  editMeeting?: Meeting | null;
 }
 
-export default function MeetingCreateModal({ isOpen, onClose, onSuccess }: MeetingCreateModalProps) {
+export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMeeting }: MeetingCreateModalProps) {
   const [topic, setTopic] = useState('');
   const [hostName, setHostName] = useState('');
   const [roomType, setRoomType] = useState<'main' | 'breakout'>('main');
   const [roomNumber, setRoomNumber] = useState<number>(1);
-  const [isCreating, setIsCreating] = useState(false);
+  const [status, setStatus] = useState<'active' | 'ended'>('active');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsCreating(true);
-    setError(null);
+  const isEditMode = !!editMeeting;
 
-    try {
-      const meetingUuid = crypto.randomUUID();
-      const { data, error: insertError } = await supabase
-        .from('meetings')
-        .insert({
-          meeting_uuid: meetingUuid,
-          topic: topic.trim() || 'Untitled Meeting',
-          host_name: hostName.trim() || 'Manual Entry',
-          status: 'active',
-          room_type: roomType,
-          room_number: roomType === 'breakout' ? roomNumber : null,
-          started_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      onSuccess({
-        id: data.id,
-        meeting_uuid: data.meeting_uuid,
-        topic: data.topic || 'Untitled Meeting',
-      });
-
+  useEffect(() => {
+    if (editMeeting) {
+      setTopic(editMeeting.topic || '');
+      setHostName(editMeeting.host_name || '');
+      setRoomType(editMeeting.room_type as 'main' | 'breakout' || 'main');
+      setRoomNumber(editMeeting.room_number || 1);
+      setStatus(editMeeting.status as 'active' | 'ended' || 'active');
+    } else {
       setTopic('');
       setHostName('');
       setRoomType('main');
       setRoomNumber(1);
+      setStatus('active');
+    }
+  }, [editMeeting, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      if (isEditMode && editMeeting) {
+        const { data, error: updateError } = await supabase
+          .from('meetings')
+          .update({
+            topic: topic.trim() || 'Untitled Meeting',
+            host_name: hostName.trim() || 'Manual Entry',
+            room_type: roomType,
+            room_number: roomType === 'breakout' ? roomNumber : null,
+            status,
+            ended_at: status === 'ended' ? new Date().toISOString() : null,
+          })
+          .eq('id', editMeeting.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+
+        onSuccess({
+          id: data.id,
+          meeting_uuid: data.meeting_uuid,
+          topic: data.topic || 'Untitled Meeting',
+        });
+      } else {
+        const meetingUuid = crypto.randomUUID();
+        const { data, error: insertError } = await supabase
+          .from('meetings')
+          .insert({
+            meeting_uuid: meetingUuid,
+            topic: topic.trim() || 'Untitled Meeting',
+            host_name: hostName.trim() || 'Manual Entry',
+            status: 'active',
+            room_type: roomType,
+            room_number: roomType === 'breakout' ? roomNumber : null,
+            started_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        onSuccess({
+          id: data.id,
+          meeting_uuid: data.meeting_uuid,
+          topic: data.topic || 'Untitled Meeting',
+        });
+      }
+
+      resetForm();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create meeting');
+      setError(err instanceof Error ? err.message : `Failed to ${isEditMode ? 'update' : 'create'} meeting`);
     } finally {
-      setIsCreating(false);
+      setIsSubmitting(false);
     }
   };
 
+  const resetForm = () => {
+    setTopic('');
+    setHostName('');
+    setRoomType('main');
+    setRoomNumber(1);
+    setStatus('active');
+    setError(null);
+  };
+
   const handleClose = () => {
-    if (!isCreating) {
-      setError(null);
+    if (!isSubmitting) {
+      resetForm();
       onClose();
     }
   };
@@ -76,17 +127,27 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess }: Meeti
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-              <Video className="w-5 h-5 text-blue-600" />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              isEditMode ? 'bg-amber-100' : 'bg-blue-100'
+            }`}>
+              {isEditMode ? (
+                <Pencil className="w-5 h-5 text-amber-600" />
+              ) : (
+                <Video className="w-5 h-5 text-blue-600" />
+              )}
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">Create Meeting</h2>
-              <p className="text-sm text-slate-500">Add a new meeting for testing or manual entry</p>
+              <h2 className="text-lg font-semibold text-slate-900">
+                {isEditMode ? 'Edit Meeting' : 'Create Meeting'}
+              </h2>
+              <p className="text-sm text-slate-500">
+                {isEditMode ? 'Update meeting details' : 'Add a new meeting for testing or manual entry'}
+              </p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            disabled={isCreating}
+            disabled={isSubmitting}
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5 text-slate-500" />
@@ -198,21 +259,57 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess }: Meeti
             </div>
           )}
 
+          {isEditMode && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Status
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStatus('active')}
+                  className={`px-4 py-3 rounded-xl border-2 transition-all font-medium ${
+                    status === 'active'
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                      : 'border-slate-200 hover:border-slate-300 bg-white text-slate-600'
+                  }`}
+                >
+                  Active
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus('ended')}
+                  className={`px-4 py-3 rounded-xl border-2 transition-all font-medium ${
+                    status === 'ended'
+                      ? 'border-slate-500 bg-slate-100 text-slate-700'
+                      : 'border-slate-200 hover:border-slate-300 bg-white text-slate-600'
+                  }`}
+                >
+                  Ended
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="pt-2">
             <button
               type="submit"
-              disabled={isCreating}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors"
+              disabled={isSubmitting}
+              className={`w-full flex items-center justify-center gap-2 px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors ${
+                isEditMode
+                  ? 'bg-amber-600 hover:bg-amber-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              {isCreating ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Creating...
+                  {isEditMode ? 'Saving...' : 'Creating...'}
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-5 h-5" />
-                  Create Meeting
+                  {isEditMode ? <Pencil className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+                  {isEditMode ? 'Save Changes' : 'Create Meeting'}
                 </>
               )}
             </button>

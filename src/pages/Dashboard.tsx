@@ -12,12 +12,15 @@ import {
   Filter,
   Layers,
   Zap,
-  Plus
+  Plus,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import type { Meeting } from '../types/database';
 import { formatDistanceToNow } from 'date-fns';
 import RoomGrid from '../components/RoomGrid';
 import MeetingCreateModal from '../components/MeetingCreateModal';
+import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useDemoMode } from '../contexts/DemoModeContext';
 
@@ -34,13 +37,38 @@ export default function Dashboard() {
   const [roomFilter, setRoomFilter] = useState<RoomFilter>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editMeeting, setEditMeeting] = useState<Meeting | null>(null);
+  const [deleteMeeting, setDeleteMeeting] = useState<{ id: string; topic: string } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const isLive = isDemoMode ? !isPaused : stats.activeMeetings > 0;
 
   const handleMeetingCreated = (meeting: { id: string; meeting_uuid: string; topic: string }) => {
-    setSuccessMessage(`Meeting "${meeting.topic}" created successfully`);
+    const action = editMeeting ? 'updated' : 'created';
+    setSuccessMessage(`Meeting "${meeting.topic}" ${action} successfully`);
     setTimeout(() => setSuccessMessage(null), 4000);
+    setEditMeeting(null);
     refetch();
+  };
+
+  const handleEditMeeting = (meeting: MeetingWithStats) => {
+    setEditMeeting(meeting);
+    setShowCreateModal(true);
+  };
+
+  const handleDeleteMeeting = (meeting: MeetingWithStats) => {
+    setDeleteMeeting({ id: meeting.id, topic: meeting.topic || 'Untitled Meeting' });
+  };
+
+  const handleDeleteSuccess = () => {
+    setSuccessMessage(`Meeting deleted successfully`);
+    setTimeout(() => setSuccessMessage(null), 4000);
+    setDeleteMeeting(null);
+    refetch();
+  };
+
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false);
+    setEditMeeting(null);
   };
 
   const filteredMeetings = activeMeetings.filter((meeting) => {
@@ -68,9 +96,20 @@ export default function Dashboard() {
 
       <MeetingCreateModal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={handleCloseCreateModal}
         onSuccess={handleMeetingCreated}
+        editMeeting={editMeeting}
       />
+
+      {deleteMeeting && (
+        <DeleteConfirmModal
+          isOpen={true}
+          onClose={() => setDeleteMeeting(null)}
+          onSuccess={handleDeleteSuccess}
+          meetingId={deleteMeeting.id}
+          meetingTopic={deleteMeeting.topic}
+        />
+      )}
 
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -189,11 +228,18 @@ export default function Dashboard() {
                   <RoomGrid
                     meetings={filteredMeetings}
                     participantCounts={participantCounts}
+                    onEdit={handleEditMeeting}
+                    onDelete={handleDeleteMeeting}
                   />
                 ) : (
                   <div className="space-y-3">
                     {filteredMeetings.map((meeting) => (
-                      <MeetingCard key={meeting.id} meeting={meeting} />
+                      <MeetingCard
+                        key={meeting.id}
+                        meeting={meeting}
+                        onEdit={() => handleEditMeeting(meeting)}
+                        onDelete={() => handleDeleteMeeting(meeting)}
+                      />
                     ))}
                   </div>
                 )}
@@ -321,14 +367,22 @@ function StatCard({
   );
 }
 
-function MeetingCard({ meeting }: { meeting: MeetingWithStats }) {
+function MeetingCard({
+  meeting,
+  onEdit,
+  onDelete,
+}: {
+  meeting: MeetingWithStats;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   return (
-    <Link
-      to={`/meeting/${meeting.id}`}
-      className="block p-4 hover:bg-slate-50 transition-colors"
-    >
+    <div className="p-4 hover:bg-slate-50 transition-colors rounded-xl border border-slate-100">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4 min-w-0 flex-1">
+        <Link
+          to={`/meeting/${meeting.id}`}
+          className="flex items-start gap-4 min-w-0 flex-1"
+        >
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center flex-shrink-0">
             <Video className="w-6 h-6 text-white" />
           </div>
@@ -358,9 +412,36 @@ function MeetingCard({ meeting }: { meeting: MeetingWithStats }) {
               </span>
             </div>
           </div>
+        </Link>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              onEdit();
+            }}
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-amber-600"
+            title="Edit meeting"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              onDelete();
+            }}
+            className="p-2 hover:bg-red-50 rounded-lg transition-colors text-slate-500 hover:text-red-600"
+            title="Delete meeting"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <Link
+            to={`/meeting/${meeting.id}`}
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400"
+          >
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
-        <ArrowRight className="w-5 h-5 text-slate-400 flex-shrink-0" />
       </div>
-    </Link>
+    </div>
   );
 }

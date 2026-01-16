@@ -4,8 +4,14 @@ import { useState } from 'react';
 import { useDemoMode } from '../contexts/DemoModeContext';
 
 export default function Layout() {
-  const { isDemoMode } = useDemoMode();
+  const { isDemoMode, toggleDemoMode } = useDemoMode();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleDisableDemoMode = () => {
+    if (window.confirm('Turn off demo mode? This will switch to live data from your database.')) {
+      toggleDemoMode();
+    }
+  };
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -115,9 +121,17 @@ export default function Layout() {
       <main className="lg:ml-64 min-h-screen">
         {isDemoMode && (
           <div className="sticky top-0 z-40 bg-blue-500/10 border-b border-blue-400/20 backdrop-blur-sm">
-            <div className="px-6 py-2 flex items-center justify-center gap-2 text-sm">
-              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-              <span className="font-medium text-blue-700">Demo Mode Active - Displaying Synthetic Data</span>
+            <div className="px-6 py-2 flex items-center justify-between gap-4">
+              <div className="flex items-center justify-center gap-2 text-sm flex-1">
+                <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                <span className="font-medium text-blue-700">Demo Mode Active - Displaying Synthetic Data</span>
+              </div>
+              <button
+                onClick={handleDisableDemoMode}
+                className="px-3 py-1 text-xs font-medium text-blue-700 hover:text-blue-800 hover:bg-blue-500/20 rounded-lg transition-colors"
+              >
+                Turn Off
+              </button>
             </div>
           </div>
         )}

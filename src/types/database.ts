@@ -14,6 +14,7 @@ export interface Database {
           room_type: string;
           room_number: number | null;
           parent_meeting_id: string | null;
+          icon_url: string | null;
           started_at: string | null;
           ended_at: string | null;
           created_at: string;
@@ -31,6 +32,7 @@ export interface Database {
           room_type?: string;
           room_number?: number | null;
           parent_meeting_id?: string | null;
+          icon_url?: string | null;
           started_at?: string | null;
           ended_at?: string | null;
           created_at?: string;
@@ -48,6 +50,7 @@ export interface Database {
           room_type?: string;
           room_number?: number | null;
           parent_meeting_id?: string | null;
+          icon_url?: string | null;
           started_at?: string | null;
           ended_at?: string | null;
           created_at?: string;

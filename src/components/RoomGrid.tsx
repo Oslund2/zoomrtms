@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Video, Users, Radio, Clock, Pencil, Trash2 } from 'lucide-react';
+import { Mic, Users, Radio, Clock, Pencil, Trash2, AudioWaveform } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Meeting } from '../types/database';
 
@@ -102,13 +102,32 @@ function RoomCard({
 
       <Link to={`/meeting/${meeting.id}`} className="block">
         <div className="flex items-start gap-4">
-          <div
-            className={`${
-              isMain ? 'w-16 h-16' : 'w-14 h-14'
-            } bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}
-          >
-            <Video className={`${isMain ? 'w-8 h-8' : 'w-7 h-7'} text-white`} />
-          </div>
+          {meeting.icon_url ? (
+            <div
+              className={`${
+                isMain ? 'w-16 h-16' : 'w-14 h-14'
+              } rounded-xl flex-shrink-0 group-hover:scale-110 transition-transform overflow-hidden`}
+            >
+              <img
+                src={meeting.icon_url}
+                alt="Room icon"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  target.parentElement!.classList.add('bg-gradient-to-br', 'from-blue-500', 'to-cyan-400', 'flex', 'items-center', 'justify-center');
+                }}
+              />
+            </div>
+          ) : (
+            <div
+              className={`${
+                isMain ? 'w-16 h-16' : 'w-14 h-14'
+              } bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}
+            >
+              <Mic className={`${isMain ? 'w-8 h-8' : 'w-7 h-7'} text-white`} />
+            </div>
+          )}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
@@ -162,7 +181,7 @@ function RoomSlot({
     return (
       <div className="bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 p-4 flex flex-col items-center justify-center min-h-[140px]">
         <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center mb-2">
-          <Video className="w-5 h-5 text-slate-400" />
+          <AudioWaveform className="w-5 h-5 text-slate-400" />
         </div>
         <span className="text-sm font-medium text-slate-400">Breakout {roomNumber}</span>
         <span className="text-xs text-slate-400 mt-1">Waiting...</span>
@@ -205,9 +224,19 @@ function RoomSlot({
 
       <Link to={`/meeting/${room.id}`} className="block">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Video className="w-5 h-5 text-white" />
-          </div>
+          {room.icon_url ? (
+            <div className="w-10 h-10 rounded-lg group-hover:scale-110 transition-transform overflow-hidden">
+              <img
+                src={room.icon_url}
+                alt="Room icon"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Mic className="w-5 h-5 text-white" />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <h4 className="text-sm font-bold text-slate-900 truncate">

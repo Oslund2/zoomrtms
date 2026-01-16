@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, Video, Loader2, CheckCircle2, Users, Pencil } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Mic, Loader2, CheckCircle2, Users, Pencil, Upload, ImageIcon, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Meeting } from '../types/database';
 
@@ -18,6 +18,11 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
   const [status, setStatus] = useState<'active' | 'ended'>('active');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [existingIconUrl, setExistingIconUrl] = useState<string | null>(null);
+  const [removeIcon, setRemoveIcon] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditMode = !!editMeeting;
 
@@ -28,14 +33,73 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
       setRoomType(editMeeting.room_type as 'main' | 'breakout' || 'main');
       setRoomNumber(editMeeting.room_number || 1);
       setStatus(editMeeting.status as 'active' | 'ended' || 'active');
+      setExistingIconUrl(editMeeting.icon_url || null);
+      setRemoveIcon(false);
     } else {
       setTopic('');
       setHostName('');
       setRoomType('main');
       setRoomNumber(1);
       setStatus('active');
+      setExistingIconUrl(null);
+      setRemoveIcon(false);
     }
+    setIconFile(null);
+    setIconPreview(null);
   }, [editMeeting, isOpen]);
+
+  const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file');
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        setError('Image must be smaller than 2MB');
+        return;
+      }
+      setIconFile(file);
+      setRemoveIcon(false);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIconPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveIcon = () => {
+    setIconFile(null);
+    setIconPreview(null);
+    setRemoveIcon(true);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadIcon = async (meetingId: string): Promise<string | null> => {
+    if (!iconFile) return null;
+
+    const fileExt = iconFile.name.split('.').pop();
+    const fileName = `${meetingId}-${Date.now()}.${fileExt}`;
+    const filePath = `room-icons/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('meeting-assets')
+      .upload(filePath, iconFile, { upsert: true });
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('meeting-assets')
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +108,14 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
 
     try {
       if (isEditMode && editMeeting) {
+        let newIconUrl: string | null | undefined = undefined;
+
+        if (iconFile) {
+          newIconUrl = await uploadIcon(editMeeting.id);
+        } else if (removeIcon) {
+          newIconUrl = null;
+        }
+
         const { data, error: updateError } = await supabase
           .from('meetings')
           .update({
@@ -53,6 +125,7 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
             room_number: roomType === 'breakout' ? roomNumber : null,
             status,
             ended_at: status === 'ended' ? new Date().toISOString() : null,
+            ...(newIconUrl !== undefined && { icon_url: newIconUrl }),
           })
           .eq('id', editMeeting.id)
           .select()
@@ -67,9 +140,17 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
         });
       } else {
         const meetingUuid = crypto.randomUUID();
+        const meetingId = crypto.randomUUID();
+
+        let iconUrl: string | null = null;
+        if (iconFile) {
+          iconUrl = await uploadIcon(meetingId);
+        }
+
         const { data, error: insertError } = await supabase
           .from('meetings')
           .insert({
+            id: meetingId,
             meeting_uuid: meetingUuid,
             topic: topic.trim() || 'Untitled Meeting',
             host_name: hostName.trim() || 'Manual Entry',
@@ -77,6 +158,7 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
             room_type: roomType,
             room_number: roomType === 'breakout' ? roomNumber : null,
             started_at: new Date().toISOString(),
+            icon_url: iconUrl,
           })
           .select()
           .single();
@@ -106,6 +188,13 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
     setRoomNumber(1);
     setStatus('active');
     setError(null);
+    setIconFile(null);
+    setIconPreview(null);
+    setExistingIconUrl(null);
+    setRemoveIcon(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleClose = () => {
@@ -133,7 +222,7 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
               {isEditMode ? (
                 <Pencil className="w-5 h-5 text-amber-600" />
               ) : (
-                <Video className="w-5 h-5 text-blue-600" />
+                <Mic className="w-5 h-5 text-blue-600" />
               )}
             </div>
             <div>
@@ -191,6 +280,55 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
+              Room Icon
+              <span className="text-slate-400 font-normal ml-1">(optional)</span>
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleIconChange}
+              className="hidden"
+              id="icon-upload"
+            />
+            <div className="flex items-center gap-4">
+              {(iconPreview || (existingIconUrl && !removeIcon)) ? (
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-slate-200">
+                    <img
+                      src={iconPreview || existingIconUrl || ''}
+                      alt="Icon preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveIcon}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="w-16 h-16 bg-slate-100 rounded-xl flex items-center justify-center border-2 border-dashed border-slate-300">
+                  <ImageIcon className="w-6 h-6 text-slate-400" />
+                </div>
+              )}
+              <label
+                htmlFor="icon-upload"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl cursor-pointer transition-colors"
+              >
+                <Upload className="w-4 h-4 text-slate-500" />
+                <span className="text-sm text-slate-600">
+                  {iconPreview || (existingIconUrl && !removeIcon) ? 'Change image' : 'Upload image'}
+                </span>
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-slate-400">PNG, JPG or GIF up to 2MB</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Room Type
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -206,7 +344,7 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                   roomType === 'main' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'
                 }`}>
-                  <Video className="w-5 h-5" />
+                  <Mic className="w-5 h-5" />
                 </div>
                 <div className="text-left">
                   <p className={`font-medium ${roomType === 'main' ? 'text-blue-900' : 'text-slate-700'}`}>

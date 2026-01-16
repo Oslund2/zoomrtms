@@ -10,6 +10,9 @@ export function generateNodeJSRTMSClient(credentials: Credentials): string {
   return `// Zoom RTMS Multi-Room Client - Production Ready
 // Handles 1 main conference room + 8 breakout rooms simultaneously
 // Based on official Zoom RTMS samples with enhanced error handling
+//
+// AUTHENTICATION: This client uses OAuth app credentials (Client ID + Client Secret)
+// Meeting hosts authorize your OAuth app, allowing access to RTMS streams from their meetings
 
 const rtms = require('@zoom/rtms').default;
 const fetch = require('node-fetch');
@@ -525,10 +528,14 @@ module.exports = {
 }
 
 export function generateEnvTemplate(supabaseUrl: string): string {
-  return `# Zoom OAuth Credentials
+  return `# Zoom OAuth App Credentials
+# Get these from your OAuth app (NOT Server-to-Server OAuth) in Zoom Marketplace
 ZOOM_CLIENT_ID=your_client_id_here
 ZOOM_CLIENT_SECRET=your_client_secret_here
 ZOOM_WEBHOOK_SECRET=your_webhook_secret_here
+
+# Note: OAuth apps use Client ID and Client Secret only
+# Account ID is NOT required for OAuth apps
 
 # Supabase Configuration (automatically provided)
 SUPABASE_URL=${supabaseUrl}

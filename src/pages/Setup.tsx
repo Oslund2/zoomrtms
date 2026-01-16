@@ -26,11 +26,11 @@ import {
 } from '../lib/codeGenerator';
 
 interface SetupState {
-  accountId: string;
   clientId: string;
   clientSecret: string;
   webhookSecret: string;
   scopesConfirmed: boolean;
+  redirectUrlConfigured: boolean;
 }
 
 const STEPS = [
@@ -48,11 +48,11 @@ export default function Setup() {
   const [setupState, setSetupState] = useState<SetupState>(() => {
     const saved = localStorage.getItem('rtms_setup_state');
     return saved ? JSON.parse(saved) : {
-      accountId: '',
       clientId: '',
       clientSecret: '',
       webhookSecret: '',
       scopesConfirmed: false,
+      redirectUrlConfigured: false,
     };
   });
   const [copied, setCopied] = useState<string | null>(null);
@@ -88,7 +88,7 @@ export default function Setup() {
   const isStepComplete = (step: number): boolean => {
     switch (step) {
       case 1:
-        return !!setupState.accountId;
+        return setupState.redirectUrlConfigured;
       case 2:
         return !!setupState.clientId && !!setupState.clientSecret;
       case 3:
@@ -178,8 +178,9 @@ export default function Setup() {
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 mb-6">
           {currentStep === 1 && (
             <Step1CreateApp
-              accountId={setupState.accountId}
-              onAccountIdChange={(val) => updateField('accountId', val)}
+              redirectUrlConfigured={setupState.redirectUrlConfigured}
+              onRedirectUrlConfigured={(val) => updateField('redirectUrlConfigured', val)}
+              supabaseUrl={supabaseUrl}
               onCopy={copyToClipboard}
               copied={copied}
             />
@@ -266,22 +267,26 @@ export default function Setup() {
 }
 
 function Step1CreateApp({
-  accountId,
-  onAccountIdChange,
+  redirectUrlConfigured,
+  onRedirectUrlConfigured,
+  supabaseUrl,
   onCopy,
   copied,
 }: {
-  accountId: string;
-  onAccountIdChange: (val: string) => void;
+  redirectUrlConfigured: boolean;
+  onRedirectUrlConfigured: (val: boolean) => void;
+  supabaseUrl: string;
   onCopy: (text: string, key: string) => void;
   copied: string | null;
 }) {
+  const redirectUrl = `${supabaseUrl}/auth/v1/callback`;
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Create Your Zoom App</h2>
         <p className="text-slate-600">
-          First, create a Server-to-Server OAuth app in the Zoom Marketplace
+          Create an OAuth app in the Zoom Marketplace for RTMS with user authorization
         </p>
       </div>
 
@@ -289,8 +294,7 @@ function Step1CreateApp({
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800">
-            <strong>Important:</strong> This app type allows secure, automated access to
-            Zoom APIs without requiring user interaction.
+            <strong>Important:</strong> OAuth apps allow meeting hosts to authorize your app to access RTMS data from their meetings. This is the correct app type for RTMS integrations where hosts need to give permission.
           </div>
         </div>
       </div>
@@ -327,7 +331,7 @@ function Step1CreateApp({
               <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                 2
               </span>
-              Choose "Server-to-Server OAuth" app type
+              Choose <strong>"OAuth"</strong> app type (NOT Server-to-Server OAuth)
             </li>
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -338,22 +342,45 @@ function Step1CreateApp({
           </ol>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Account ID
-            <span className="text-red-500 ml-1">*</span>
-          </label>
-          <input
-            type="text"
-            value={accountId}
-            onChange={(e) => onAccountIdChange(e.target.value)}
-            placeholder="Enter your Zoom Account ID"
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <p className="text-xs text-slate-500 mt-2">
-            Find this in your app's "App Credentials" page in the Zoom Marketplace
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <h3 className="font-semibold text-slate-900 mb-3">Step 1.3: Configure Redirect URL</h3>
+          <p className="text-sm text-slate-600 mb-3">
+            In your Zoom app settings, add this redirect URL under "OAuth" settings:
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={redirectUrl}
+              className="flex-1 px-4 py-3 bg-white border border-amber-300 rounded-xl text-slate-700 font-mono text-sm"
+            />
+            <button
+              onClick={() => onCopy(redirectUrl, 'redirect-url')}
+              className="px-4 py-3 bg-amber-100 hover:bg-amber-200 rounded-xl transition-colors"
+            >
+              {copied === 'redirect-url' ? (
+                <Check className="w-5 h-5 text-emerald-500" />
+              ) : (
+                <Copy className="w-5 h-5 text-amber-700" />
+              )}
+            </button>
+          </div>
+          <p className="text-xs text-amber-700 mt-2">
+            Note: For this RTMS integration, the redirect URL is required for OAuth setup but the actual authorization flow happens when meeting hosts enable RTMS for their meetings.
           </p>
         </div>
+
+        <label className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl cursor-pointer hover:bg-emerald-100 transition-colors">
+          <input
+            type="checkbox"
+            checked={redirectUrlConfigured}
+            onChange={(e) => onRedirectUrlConfigured(e.target.checked)}
+            className="w-5 h-5 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500"
+          />
+          <span className="text-sm font-medium text-emerald-900">
+            I confirm that I have created an OAuth app and configured the redirect URL
+          </span>
+        </label>
       </div>
     </div>
   );
@@ -566,9 +593,9 @@ function Step4Scopes({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">RTMS Scope Activation</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">OAuth Scopes & RTMS Access</h2>
         <p className="text-slate-600">
-          Enable the required scopes for RTMS functionality
+          Configure OAuth scopes and enable RTMS features for your app
         </p>
       </div>
 
@@ -576,8 +603,16 @@ function Step4Scopes({
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800">
-            <strong>RTMS Access:</strong> To use Realtime Media Streams, your Zoom account
-            must have RTMS enabled. Contact Zoom if you don't see RTMS options.
+            <strong>OAuth Authorization:</strong> With OAuth apps, meeting hosts will authorize your app to access RTMS data from their meetings. The scopes you configure here determine what permissions users grant when they authorize your app.
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <strong>RTMS Access:</strong> Your Zoom account must have RTMS enabled. Contact your Zoom representative or Zoom support if you don't see RTMS options in your app settings.
           </div>
         </div>
       </div>
@@ -604,13 +639,13 @@ function Step4Scopes({
         </div>
 
         <div className="p-4 bg-slate-50 rounded-xl">
-          <h3 className="font-semibold text-slate-900 mb-2">How to add scopes:</h3>
+          <h3 className="font-semibold text-slate-900 mb-2">How to configure scopes and RTMS:</h3>
           <ol className="space-y-2 text-sm text-slate-600">
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                 1
               </span>
-              Go to your app in the Zoom Marketplace
+              Go to your OAuth app in the Zoom Marketplace
             </li>
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -622,15 +657,28 @@ function Step4Scopes({
               <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                 3
               </span>
-              Search for and add each required scope
+              Search for and add each required scope listed above
             </li>
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                 4
               </span>
-              Enable RTMS features under "Feature" tab if available
+              Look for "Features" or "Real-Time Media Streaming" section in your app settings
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                5
+              </span>
+              Enable RTMS features for your OAuth app (requires account-level RTMS access)
             </li>
           </ol>
+        </div>
+
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+          <h3 className="font-semibold text-emerald-900 mb-2">User Authorization Flow</h3>
+          <p className="text-sm text-emerald-800">
+            Once configured, meeting hosts will authorize your app when they want to enable RTMS for their meetings. They'll see a consent screen showing the scopes you've requested, and once approved, your app will receive webhook events and can connect to their RTMS streams.
+          </p>
         </div>
 
         <label className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl cursor-pointer hover:bg-emerald-100 transition-colors">

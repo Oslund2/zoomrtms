@@ -126,6 +126,7 @@ export default function ApiTesterTab() {
     const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
     const payload: Record<string, unknown> = {
+      type: 'transcript',
       meeting_uuid: selectedMeeting.meeting_uuid,
       participant_id: participantId,
       speaker_name: speakerName,
@@ -151,7 +152,7 @@ $body = @'
 ${payloadStr}
 '@
 
-Invoke-RestMethod -Uri "${supabaseUrl}/functions/v1/rtms-data" -Method Post -Headers $headers -Body $body`;
+Invoke-RestMethod -Uri "${supabaseUrl}/functions/v1/rtms-data/transcript" -Method Post -Headers $headers -Body $body`;
   };
 
   const copyToClipboard = async () => {
@@ -176,6 +177,7 @@ Invoke-RestMethod -Uri "${supabaseUrl}/functions/v1/rtms-data" -Method Post -Hea
     const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
     const payload: Record<string, unknown> = {
+      type: 'transcript',
       meeting_uuid: selectedMeeting.meeting_uuid,
       participant_id: participantId,
       speaker_name: speakerName,
@@ -190,7 +192,7 @@ Invoke-RestMethod -Uri "${supabaseUrl}/functions/v1/rtms-data" -Method Post -Hea
     }
 
     try {
-      const response = await fetch(`${supabaseUrl}/functions/v1/rtms-data`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/rtms-data/transcript`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

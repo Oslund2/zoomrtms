@@ -70,7 +70,7 @@ export default function Settings() {
                 }`}
               >
                 <Terminal className="w-5 h-5" />
-                <span>API Tester</span>
+                <span>RTMS Tester</span>
               </button>
             </div>
           </div>

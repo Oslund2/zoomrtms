@@ -19,6 +19,7 @@ export function useDashboardData() {
     totalTranscripts: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -100,6 +101,33 @@ export function useDashboardData() {
     setLoading(false);
   }, [isDemoMode, demoData]);
 
+  const fetchTranscriptsOnly = useCallback(async () => {
+    if (isDemoMode) {
+      const meetings = demoData.meetings.filter(m => m.status === 'active');
+      const recentTranscriptsWithTopic = demoData.transcripts.slice(0, 5).map(t => ({
+        ...t,
+        meeting_topic: meetings[0]?.topic || 'Meeting',
+      }));
+      setRecentTranscripts(recentTranscriptsWithTopic);
+      setLastRefreshTime(new Date());
+      return;
+    }
+
+    const transcriptsRes = await supabase
+      .from('transcripts')
+      .select('*, meetings(topic)')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    const recentTranscriptsWithTopic = (transcriptsRes.data || []).map((t: any) => ({
+      ...t,
+      meeting_topic: t.meetings?.topic,
+    }));
+
+    setRecentTranscripts(recentTranscriptsWithTopic);
+    setLastRefreshTime(new Date());
+  }, [isDemoMode, demoData]);
+
   useEffect(() => {
     fetchData();
 
@@ -119,5 +147,15 @@ export function useDashboardData() {
     };
   }, [fetchData, isDemoMode]);
 
-  return { activeMeetings, recentTranscripts, stats, loading, refetch: fetchData };
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchTranscriptsOnly();
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [fetchTranscriptsOnly]);
+
+  return { activeMeetings, recentTranscripts, stats, loading, refetch: fetchData, lastRefreshTime };
 }

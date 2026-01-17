@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Settings as SettingsIcon, Rocket, ArrowLeft } from 'lucide-react';
+import { Settings as SettingsIcon, Rocket, ArrowLeft, Terminal } from 'lucide-react';
 import SettingsTab from '../components/SettingsTab';
 import SetupTab from '../components/SetupTab';
+import ApiTesterTab from '../components/ApiTesterTab';
 
 export default function Settings() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') === 'setup' ? 'setup' : 'settings';
-  const [activeTab, setActiveTab] = useState<'settings' | 'setup'>(initialTab);
+  const tabParam = searchParams.get('tab');
+  const initialTab = tabParam === 'setup' ? 'setup' : tabParam === 'tester' ? 'tester' : 'settings';
+  const [activeTab, setActiveTab] = useState<'settings' | 'setup' | 'tester'>(initialTab);
 
-  const handleTabChange = (tab: 'settings' | 'setup') => {
+  const handleTabChange = (tab: 'settings' | 'setup' | 'tester') => {
     setActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -59,11 +61,22 @@ export default function Settings() {
                 <Rocket className="w-5 h-5" />
                 <span>Setup</span>
               </button>
+              <button
+                onClick={() => handleTabChange('tester')}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-medium transition-all ${
+                  activeTab === 'tester'
+                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <Terminal className="w-5 h-5" />
+                <span>API Tester</span>
+              </button>
             </div>
           </div>
 
           <div className="transition-opacity duration-200">
-            {activeTab === 'settings' ? <SettingsTab /> : <SetupTab />}
+            {activeTab === 'settings' ? <SettingsTab /> : activeTab === 'setup' ? <SetupTab /> : <ApiTesterTab />}
           </div>
         </div>
       </div>

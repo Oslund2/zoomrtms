@@ -103,7 +103,7 @@ export default function Layout() {
               }
             >
               <Brain className="w-5 h-5" />
-              <span className="font-medium">Room Prompts</span>
+              <span className="font-medium">Admin Orchestrator</span>
             </NavLink>
             <NavLink
               to="/settings"

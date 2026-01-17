@@ -65,6 +65,21 @@
     }
   }
 
+  @keyframes slide-in-from-right {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .slide-in-from-right {
+    animation-name: slide-in-from-right;
+  }
+
   .animate-in {
     animation-duration: 0.5s;
     animation-timing-function: ease-out;
@@ -76,5 +91,23 @@
 
   .slide-in-from-top-4 {
     animation-name: slide-in-from-top;
+  }
+
+  @keyframes smooth-scroll-up {
+    0% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(-50%);
+    }
+  }
+
+  .animate-smooth-scroll {
+    animation: smooth-scroll-up var(--scroll-duration, 60s) linear infinite;
+  }
+
+  .animate-smooth-scroll:hover,
+  .animate-smooth-scroll.paused {
+    animation-play-state: paused;
   }
 }

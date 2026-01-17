@@ -24,6 +24,7 @@ import {
 } from '../hooks/useAmbientData';
 import { useDemoMode } from '../contexts/DemoModeContext';
 import { AmbientSelectionProvider, useAmbientSelection } from '../contexts/AmbientSelectionContext';
+import { TopicDetailPanel } from '../components/TopicDetailPanel';
 import type { InsightEvent } from '../types/database';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -185,6 +186,22 @@ function AmbientDisplayContent() {
 
         <Footer stats={stats} />
       </div>
+
+      {selectedTopic && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            onClick={clearAllFilters}
+          />
+          <TopicDetailPanel
+            topic={selectedTopic}
+            insights={insights}
+            nodes={nodes}
+            edges={edges}
+            onClose={clearAllFilters}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -855,10 +872,9 @@ function RoomStatusPanel({ stats, summaries }: { stats: ReturnType<typeof useAmb
 }
 
 function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
-  const feedRef = useRef<HTMLDivElement>(null);
   const { selectedTopic, selectedRoom } = useAmbientSelection();
-  const [autoScroll, setAutoScroll] = useState(true);
-  const scrollAnimationRef = useRef<number>();
+  const [isPaused, setIsPaused] = useState(false);
+  const pauseTimeoutRef = useRef<NodeJS.Timeout>();
 
   const filteredInsights = insights.filter((insight) => {
     if (selectedTopic && !insight.related_topics.includes(selectedTopic.label)) {
@@ -870,41 +886,21 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
     return true;
   });
 
-  useEffect(() => {
-    const feed = feedRef.current;
-    if (!feed || !autoScroll) return;
-
-    let scrollPosition = 0;
-    const scrollSpeed = 0.3;
-    let lastTime = performance.now();
-
-    const smoothScroll = (currentTime: number) => {
-      const deltaTime = currentTime - lastTime;
-      lastTime = currentTime;
-
-      scrollPosition += scrollSpeed * (deltaTime / 16);
-
-      if (scrollPosition >= feed.scrollHeight - feed.clientHeight) {
-        scrollPosition = 0;
-      }
-
-      feed.scrollTop = scrollPosition;
-      scrollAnimationRef.current = requestAnimationFrame(smoothScroll);
-    };
-
-    scrollAnimationRef.current = requestAnimationFrame(smoothScroll);
-
-    return () => {
-      if (scrollAnimationRef.current) {
-        cancelAnimationFrame(scrollAnimationRef.current);
-      }
-    };
-  }, [filteredInsights, autoScroll]);
-
-  const handleScroll = () => {
-    setAutoScroll(false);
-    setTimeout(() => setAutoScroll(true), 5000);
+  const handleInteraction = () => {
+    setIsPaused(true);
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
+    pauseTimeoutRef.current = setTimeout(() => setIsPaused(false), 5000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const getInsightIcon = (type: string) => {
     switch (type) {
@@ -929,6 +925,60 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
     return 'border-slate-600/30 bg-slate-800/50';
   };
 
+  const scrollDuration = Math.max(30, filteredInsights.length * 4);
+
+  const renderInsightCard = (insight: InsightEvent, index: number, keyPrefix: string = '') => {
+    const Icon = getInsightIcon(insight.insight_type);
+    const hasMatchingTopic = selectedTopic && insight.related_topics.includes(selectedTopic.label);
+    return (
+      <div
+        key={`${keyPrefix}${insight.id}`}
+        className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border ${getInsightColors(insight.insight_type, insight.severity)} ${
+          hasMatchingTopic ? 'ring-2 ring-blue-400/50' : ''
+        }`}
+      >
+        <div className="flex items-start gap-2 sm:gap-3">
+          <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+            insight.insight_type === 'misalignment' ? 'bg-amber-500/20 text-amber-400' :
+            insight.insight_type === 'alignment' ? 'bg-emerald-500/20 text-emerald-400' :
+            'bg-blue-500/20 text-blue-400'
+          }`}>
+            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-white text-xs sm:text-sm leading-tight mb-1">
+              {insight.title}
+            </h4>
+            <p className="text-[10px] sm:text-xs text-slate-300 line-clamp-2">
+              {insight.description}
+            </p>
+            <div className="flex items-center gap-1 sm:gap-2 mt-1.5 sm:mt-2 flex-wrap">
+              {insight.involved_rooms && insight.involved_rooms.length > 0 && (
+                <div className="flex items-center gap-0.5 sm:gap-1">
+                  {insight.involved_rooms.slice(0, 4).map((room) => (
+                    <span key={room} className={`px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs rounded ${
+                      selectedRoom === room
+                        ? 'bg-emerald-500/30 border border-emerald-400/50 text-emerald-300'
+                        : 'bg-slate-700/50 text-slate-300'
+                    }`}>
+                      {room === 0 ? 'M' : room}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {hasMatchingTopic && (
+                <span className="px-1.5 sm:px-2 py-0.5 bg-blue-500/20 border border-blue-400/40 text-[10px] sm:text-xs text-blue-300 rounded flex items-center gap-0.5 sm:gap-1">
+                  <Target className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  <span className="truncate max-w-[60px] sm:max-w-none">{selectedTopic.label}</span>
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-full bg-slate-900/50 rounded-xl sm:rounded-2xl border border-slate-700/50 backdrop-blur-sm overflow-hidden flex flex-col">
       <div className="px-3 sm:px-5 py-2 sm:py-3 border-b border-slate-700/50 flex items-center justify-between">
@@ -936,86 +986,47 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
           <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
           <h2 className="text-sm sm:text-lg font-semibold text-white">Live Insights</h2>
         </div>
-        {(selectedTopic || selectedRoom !== null) && (
-          <span className="px-2 py-0.5 sm:py-1 bg-blue-500/20 border border-blue-400/30 rounded-lg text-[10px] sm:text-xs text-blue-300">
-            {filteredInsights.length}/{insights.length}
-          </span>
-        )}
+        <span className="px-2 py-0.5 sm:py-1 bg-slate-700/50 border border-slate-600/30 rounded-lg text-[10px] sm:text-xs text-slate-300">
+          {filteredInsights.length}/{insights.length}
+        </span>
       </div>
 
-      <div ref={feedRef} className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-3" onWheel={handleScroll} onTouchStart={() => setAutoScroll(false)}>
+      <div
+        className="flex-1 overflow-hidden relative"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={handleInteraction}
+        onWheel={handleInteraction}
+      >
         {filteredInsights.length === 0 && insights.length > 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center p-4">
+          <div className="h-full flex items-center justify-center p-4">
+            <div className="text-center">
               <Target className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mx-auto mb-3" />
               <p className="text-slate-400 text-sm sm:text-base">No insights match filters</p>
               <p className="text-xs sm:text-sm text-slate-500">Try a different selection</p>
             </div>
           </div>
         ) : insights.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center p-4">
+          <div className="h-full flex items-center justify-center p-4">
+            <div className="text-center">
               <Lightbulb className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mx-auto mb-3" />
               <p className="text-slate-400 text-sm sm:text-base">Generating insights...</p>
               <p className="text-xs sm:text-sm text-slate-500">Patterns will appear here</p>
             </div>
           </div>
+        ) : filteredInsights.length <= 3 ? (
+          <div className="p-2 sm:p-4 space-y-2 sm:space-y-3 overflow-y-auto h-full">
+            {filteredInsights.map((insight, index) => renderInsightCard(insight, index))}
+          </div>
         ) : (
-          filteredInsights.map((insight, index) => {
-            const Icon = getInsightIcon(insight.insight_type);
-            const hasMatchingTopic = selectedTopic && insight.related_topics.includes(selectedTopic.label);
-            return (
-              <div
-                key={insight.id}
-                className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border ${getInsightColors(insight.insight_type, insight.severity)} transition-all duration-500 ease-out animate-in fade-in slide-in-from-top-4 ${
-                  hasMatchingTopic ? 'ring-2 ring-blue-400/50' : ''
-                }`}
-                style={{
-                  animationDelay: `${index * 50}ms`,
-                  animationFillMode: 'backwards'
-                }}
-              >
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    insight.insight_type === 'misalignment' ? 'bg-amber-500/20 text-amber-400' :
-                    insight.insight_type === 'alignment' ? 'bg-emerald-500/20 text-emerald-400' :
-                    'bg-blue-500/20 text-blue-400'
-                  }`}>
-                    <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-white text-xs sm:text-sm leading-tight mb-1">
-                      {insight.title}
-                    </h4>
-                    <p className="text-[10px] sm:text-xs text-slate-300 line-clamp-2">
-                      {insight.description}
-                    </p>
-                    <div className="flex items-center gap-1 sm:gap-2 mt-1.5 sm:mt-2 flex-wrap">
-                      {insight.involved_rooms && insight.involved_rooms.length > 0 && (
-                        <div className="flex items-center gap-0.5 sm:gap-1">
-                          {insight.involved_rooms.slice(0, 4).map((room) => (
-                            <span key={room} className={`px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs rounded ${
-                              selectedRoom === room
-                                ? 'bg-emerald-500/30 border border-emerald-400/50 text-emerald-300'
-                                : 'bg-slate-700/50 text-slate-300'
-                            }`}>
-                              {room === 0 ? 'M' : room}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {hasMatchingTopic && (
-                        <span className="px-1.5 sm:px-2 py-0.5 bg-blue-500/20 border border-blue-400/40 text-[10px] sm:text-xs text-blue-300 rounded flex items-center gap-0.5 sm:gap-1">
-                          <Target className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          <span className="truncate max-w-[60px] sm:max-w-none">{selectedTopic.label}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })
+          <div
+            className={`animate-smooth-scroll p-2 sm:p-4 space-y-2 sm:space-y-3 ${isPaused ? 'paused' : ''}`}
+            style={{ '--scroll-duration': `${scrollDuration}s` } as React.CSSProperties}
+          >
+            {filteredInsights.map((insight, index) => renderInsightCard(insight, index))}
+            <div className="h-4" aria-hidden="true" />
+            {filteredInsights.map((insight, index) => renderInsightCard(insight, index, 'dup-'))}
+          </div>
         )}
       </div>
     </div>

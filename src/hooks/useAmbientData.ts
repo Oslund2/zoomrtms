@@ -119,12 +119,18 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
     if (isDemoMode) {
       await new Promise(resolve => setTimeout(resolve, 400));
 
+      const calculateConversationVolume = (node: TopicNode) => {
+        const roomMentions = node.room_mentions as Record<string, number>;
+        return Object.values(roomMentions).reduce((sum, count) => sum + count, 0);
+      };
+
       const calculateEnergy = (node: TopicNode) => {
         const mentionCount = node.mention_count || 1;
         const roomCount = Object.keys(node.room_mentions as Record<string, number>).length;
+        const conversationVolume = calculateConversationVolume(node);
         const recencyScore = 1.0;
 
-        const energy = (mentionCount * 0.4) + (roomCount * 0.3) + (node.importance_score * 0.3);
+        const energy = (mentionCount * 0.3) + (roomCount * 0.25) + (conversationVolume * 0.25) + (node.importance_score * 0.2);
         return energy * recencyScore;
       };
 
@@ -132,6 +138,7 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
         .map((n) => ({
           ...n,
           energyScore: calculateEnergy(n),
+          conversationVolume: calculateConversationVolume(n),
         }))
         .sort((a, b) => b.energyScore - a.energyScore)
         .slice(0, 10);
@@ -141,21 +148,25 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
         (e) => nodeIds.includes(e.source_node_id) && nodeIds.includes(e.target_node_id)
       );
 
+      const maxVolume = Math.max(...rankedNodes.map(n => n.conversationVolume), 1);
+      const minVolume = Math.min(...rankedNodes.map(n => n.conversationVolume), 1);
+      const volumeRange = maxVolume - minVolume || 1;
+
       setNodes(
         rankedNodes.map((n) => {
-          const energy = n.energyScore;
-          const baseSize = 20;
-          const energyMultiplier = 1 + (energy / 10);
-          const calculatedSize = baseSize * energyMultiplier;
+          const normalizedVolume = (n.conversationVolume - minVolume) / volumeRange;
+          const minSize = 22;
+          const maxSize = 75;
+          const calculatedSize = minSize + (normalizedVolume * (maxSize - minSize));
 
           return {
             id: n.id,
             label: n.label,
             category: n.category,
-            size: Math.max(25, Math.min(60, calculatedSize)),
+            size: Math.round(calculatedSize),
             roomMentions: n.room_mentions as Record<string, number>,
             importance: n.importance_score,
-            energy: energy,
+            energy: n.energyScore,
           };
         })
       );
@@ -190,13 +201,19 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
       return;
     }
 
+    const calculateConversationVolume = (node: TopicNode) => {
+      const roomMentions = node.room_mentions as Record<string, number>;
+      return Object.values(roomMentions).reduce((sum, count) => sum + count, 0);
+    };
+
     const calculateEnergy = (node: TopicNode) => {
       const mentionCount = node.mention_count || 1;
       const roomCount = Object.keys(node.room_mentions as Record<string, number>).length;
+      const conversationVolume = calculateConversationVolume(node);
       const timeSinceLastSeen = Date.now() - new Date(node.last_seen).getTime();
       const recencyScore = Math.max(0.1, 1 - (timeSinceLastSeen / (60 * 60 * 1000)));
 
-      const energy = (mentionCount * 0.4) + (roomCount * 0.3) + (node.importance_score * 0.3);
+      const energy = (mentionCount * 0.3) + (roomCount * 0.25) + (conversationVolume * 0.25) + (node.importance_score * 0.2);
       return energy * recencyScore;
     };
 
@@ -204,6 +221,7 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
       .map((n) => ({
         ...n,
         energyScore: calculateEnergy(n),
+        conversationVolume: calculateConversationVolume(n),
       }))
       .sort((a, b) => b.energyScore - a.energyScore)
       .slice(0, 10);
@@ -220,21 +238,25 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
       );
     }
 
+    const maxVolume = Math.max(...rankedNodes.map(n => n.conversationVolume), 1);
+    const minVolume = Math.min(...rankedNodes.map(n => n.conversationVolume), 1);
+    const volumeRange = maxVolume - minVolume || 1;
+
     setNodes(
       rankedNodes.map((n) => {
-        const energy = n.energyScore;
-        const baseSize = 20;
-        const energyMultiplier = 1 + (energy / 10);
-        const calculatedSize = baseSize * energyMultiplier;
+        const normalizedVolume = (n.conversationVolume - minVolume) / volumeRange;
+        const minSize = 22;
+        const maxSize = 75;
+        const calculatedSize = minSize + (normalizedVolume * (maxSize - minSize));
 
         return {
           id: n.id,
           label: n.label,
           category: n.category,
-          size: Math.max(25, Math.min(60, calculatedSize)),
+          size: Math.round(calculatedSize),
           roomMentions: n.room_mentions as Record<string, number>,
           importance: n.importance_score,
-          energy: energy,
+          energy: n.energyScore,
         };
       })
     );

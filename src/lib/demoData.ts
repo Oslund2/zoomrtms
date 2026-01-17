@@ -276,17 +276,46 @@ class DemoDataGenerator {
     const now = new Date();
     const categories = Object.keys(TOPIC_LABELS);
 
+    const hotTopics = ['Cloud Migration', 'Digital Transformation', 'ROI Analysis'];
+    const mediumTopics = ['Change Management', 'API Architecture', 'Process Automation', 'Budget Planning', 'Team Culture'];
+
     categories.forEach(category => {
       const labels = TOPIC_LABELS[category as keyof typeof TOPIC_LABELS];
       labels.forEach(label => {
-        const mentionCount = Math.floor(Math.random() * 15) + 3;
-        const roomMentions: Record<string, number> = {};
+        let mentionCount: number;
+        let numRooms: number;
+        let importanceScore: number;
 
-        // Distribute mentions across rooms
-        const numRooms = Math.floor(Math.random() * 4) + 1;
+        if (hotTopics.includes(label)) {
+          mentionCount = Math.floor(Math.random() * 20) + 35;
+          numRooms = Math.floor(Math.random() * 3) + 6;
+          importanceScore = Math.random() * 0.15 + 0.85;
+        } else if (mediumTopics.includes(label)) {
+          mentionCount = Math.floor(Math.random() * 12) + 18;
+          numRooms = Math.floor(Math.random() * 3) + 3;
+          importanceScore = Math.random() * 0.2 + 0.6;
+        } else {
+          mentionCount = Math.floor(Math.random() * 10) + 3;
+          numRooms = Math.floor(Math.random() * 2) + 1;
+          importanceScore = Math.random() * 0.4 + 0.2;
+        }
+
+        const roomMentions: Record<string, number> = {};
+        const usedRooms = new Set<number>();
+
         for (let i = 0; i < numRooms; i++) {
-          const room = Math.floor(Math.random() * 9);
-          roomMentions[room] = Math.floor(Math.random() * 5) + 1;
+          let room: number;
+          do {
+            room = Math.floor(Math.random() * 9);
+          } while (usedRooms.has(room));
+          usedRooms.add(room);
+
+          const roomShare = hotTopics.includes(label)
+            ? Math.floor(Math.random() * 8) + 4
+            : mediumTopics.includes(label)
+            ? Math.floor(Math.random() * 6) + 2
+            : Math.floor(Math.random() * 4) + 1;
+          roomMentions[room] = roomShare;
         }
 
         const firstSeen = new Date(now.getTime() - Math.random() * 3600000);
@@ -299,7 +328,7 @@ class DemoDataGenerator {
           category,
           mention_count: mentionCount,
           room_mentions: roomMentions,
-          importance_score: Math.random() * 0.7 + 0.3,
+          importance_score: importanceScore,
           first_seen: firstSeen.toISOString(),
           last_seen: lastSeen.toISOString(),
           created_at: firstSeen.toISOString(),

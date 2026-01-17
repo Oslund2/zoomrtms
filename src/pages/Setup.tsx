@@ -15,9 +15,10 @@ import {
   Zap,
   Download,
   ArrowLeft,
-  Terminal,
   RefreshCw,
-  Loader2
+  Loader2,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 import {
   generateNodeJSRTMSClient,
@@ -27,7 +28,6 @@ import {
   generatePowerShellTestCommand,
   generateCurlChatCommand,
   generateCurlParticipantCommand,
-  generateWebhookTestPayload
 } from '../lib/codeGenerator';
 import { supabase } from '../lib/supabase';
 
@@ -37,6 +37,12 @@ interface SetupState {
   webhookSecret: string;
   scopesConfirmed: boolean;
   redirectUrlConfigured: boolean;
+}
+
+interface EnvConfig {
+  clientIdConfigured: boolean;
+  clientSecretConfigured: boolean;
+  webhookSecretConfigured: boolean;
 }
 
 const STEPS = [
@@ -62,10 +68,48 @@ export default function Setup() {
     };
   });
   const [copied, setCopied] = useState<string | null>(null);
+  const [envConfig, setEnvConfig] = useState<EnvConfig>({
+    clientIdConfigured: false,
+    clientSecretConfigured: false,
+    webhookSecretConfigured: false,
+  });
+  const [isCheckingConfig, setIsCheckingConfig] = useState(true);
+  const [hasAutoSkipped, setHasAutoSkipped] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const webhookUrl = `${supabaseUrl}/functions/v1/zoom-webhook`;
   const dataUrl = `${supabaseUrl}/functions/v1/rtms-data`;
+
+  useEffect(() => {
+    const checkConfigStatus = async () => {
+      try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/config-status`);
+        if (response.ok) {
+          const status = await response.json();
+          setEnvConfig(status);
+        }
+      } catch (err) {
+        console.error('Failed to check config status:', err);
+      } finally {
+        setIsCheckingConfig(false);
+      }
+    };
+    checkConfigStatus();
+  }, [supabaseUrl]);
+
+  useEffect(() => {
+    if (!isCheckingConfig && !hasAutoSkipped) {
+      const allCredentialsConfigured =
+        envConfig.clientIdConfigured &&
+        envConfig.clientSecretConfigured &&
+        envConfig.webhookSecretConfigured;
+
+      if (allCredentialsConfigured) {
+        setCurrentStep(4);
+        setHasAutoSkipped(true);
+      }
+    }
+  }, [isCheckingConfig, envConfig, hasAutoSkipped]);
 
   useEffect(() => {
     localStorage.setItem('rtms_setup_state', JSON.stringify(setupState));
@@ -94,11 +138,12 @@ export default function Setup() {
   const isStepComplete = (step: number): boolean => {
     switch (step) {
       case 1:
-        return setupState.redirectUrlConfigured;
+        return setupState.redirectUrlConfigured || (envConfig.clientIdConfigured && envConfig.clientSecretConfigured);
       case 2:
-        return !!setupState.clientId && !!setupState.clientSecret;
+        return (envConfig.clientIdConfigured && envConfig.clientSecretConfigured) ||
+               (!!setupState.clientId && !!setupState.clientSecret);
       case 3:
-        return !!setupState.webhookSecret;
+        return envConfig.webhookSecretConfigured || !!setupState.webhookSecret;
       case 4:
         return setupState.scopesConfirmed;
       case 5:
@@ -197,6 +242,8 @@ export default function Setup() {
               clientSecret={setupState.clientSecret}
               onClientIdChange={(val) => updateField('clientId', val)}
               onClientSecretChange={(val) => updateField('clientSecret', val)}
+              envConfig={envConfig}
+              isCheckingConfig={isCheckingConfig}
             />
           )}
           {currentStep === 3 && (
@@ -206,6 +253,8 @@ export default function Setup() {
               onWebhookSecretChange={(val) => updateField('webhookSecret', val)}
               onCopy={copyToClipboard}
               copied={copied}
+              envConfig={envConfig}
+              isCheckingConfig={isCheckingConfig}
             />
           )}
           {currentStep === 4 && (
@@ -397,13 +446,111 @@ function Step2OAuth({
   clientSecret,
   onClientIdChange,
   onClientSecretChange,
+  envConfig,
+  isCheckingConfig,
 }: {
   clientId: string;
   clientSecret: string;
   onClientIdChange: (val: string) => void;
   onClientSecretChange: (val: string) => void;
+  envConfig: EnvConfig;
+  isCheckingConfig: boolean;
 }) {
   const [showSecret, setShowSecret] = useState(false);
+  const bothConfigured = envConfig.clientIdConfigured && envConfig.clientSecretConfigured;
+
+  if (isCheckingConfig) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">OAuth Credentials</h2>
+          <p className="text-slate-600">Checking configuration status...</p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (bothConfigured) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">OAuth Credentials</h2>
+          <p className="text-slate-600">
+            Your OAuth credentials are already configured
+          </p>
+        </div>
+
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-emerald-800">
+              <strong>Already Configured:</strong> Your Client ID and Client Secret are securely stored in your environment. You can proceed to the next step.
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              <span className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-slate-400" />
+                Client ID
+              </span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value="********************************"
+                disabled
+                className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-mono cursor-not-allowed"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-md">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Configured
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              <span className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-slate-400" />
+                Client Secret
+              </span>
+            </label>
+            <div className="relative">
+              <input
+                type="password"
+                value="********************************"
+                disabled
+                className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-mono cursor-not-allowed"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-md">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Configured
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-slate-600">
+              <strong>Need to change these?</strong> Update your secrets in Bolt or environment variables in Netlify. These values cannot be modified from this wizard for security reasons.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -430,13 +577,30 @@ function Step2OAuth({
             Client ID
             <span className="text-red-500 ml-1">*</span>
           </label>
-          <input
-            type="text"
-            value={clientId}
-            onChange={(e) => onClientIdChange(e.target.value)}
-            placeholder="Enter your Client ID"
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+          {envConfig.clientIdConfigured ? (
+            <div className="relative">
+              <input
+                type="text"
+                value="********************************"
+                disabled
+                className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-mono cursor-not-allowed"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-md">
+                  <Lock className="w-3 h-3" />
+                  Configured
+                </span>
+              </div>
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={clientId}
+              onChange={(e) => onClientIdChange(e.target.value)}
+              placeholder="Enter your Client ID"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          )}
         </div>
 
         <div>
@@ -444,21 +608,38 @@ function Step2OAuth({
             Client Secret
             <span className="text-red-500 ml-1">*</span>
           </label>
-          <div className="relative">
-            <input
-              type={showSecret ? 'text' : 'password'}
-              value={clientSecret}
-              onChange={(e) => onClientSecretChange(e.target.value)}
-              placeholder="Enter your Client Secret"
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-24"
-            />
-            <button
-              onClick={() => setShowSecret(!showSecret)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-sm text-slate-600 hover:text-slate-900"
-            >
-              {showSecret ? 'Hide' : 'Show'}
-            </button>
-          </div>
+          {envConfig.clientSecretConfigured ? (
+            <div className="relative">
+              <input
+                type="password"
+                value="********************************"
+                disabled
+                className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-mono cursor-not-allowed"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-md">
+                  <Lock className="w-3 h-3" />
+                  Configured
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="relative">
+              <input
+                type={showSecret ? 'text' : 'password'}
+                value={clientSecret}
+                onChange={(e) => onClientSecretChange(e.target.value)}
+                placeholder="Enter your Client Secret"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-24"
+              />
+              <button
+                onClick={() => setShowSecret(!showSecret)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-sm text-slate-600 hover:text-slate-900"
+              >
+                {showSecret ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="p-4 bg-slate-50 rounded-xl">
@@ -495,21 +676,52 @@ function Step3Webhook({
   onWebhookSecretChange,
   onCopy,
   copied,
+  envConfig,
+  isCheckingConfig,
 }: {
   webhookUrl: string;
   webhookSecret: string;
   onWebhookSecretChange: (val: string) => void;
   onCopy: (text: string, key: string) => void;
   copied: string | null;
+  envConfig: EnvConfig;
+  isCheckingConfig: boolean;
 }) {
+  if (isCheckingConfig) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Webhook Configuration</h2>
+          <p className="text-slate-600">Checking configuration status...</p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Webhook Configuration</h2>
         <p className="text-slate-600">
-          Configure your webhook endpoint to receive RTMS events
+          {envConfig.webhookSecretConfigured
+            ? 'Your webhook is already configured'
+            : 'Configure your webhook endpoint to receive RTMS events'}
         </p>
       </div>
+
+      {envConfig.webhookSecretConfigured && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-emerald-800">
+              <strong>Already Configured:</strong> Your Webhook Secret is securely stored in your environment. You can proceed to the next step.
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <div>
@@ -564,19 +776,56 @@ function Step3Webhook({
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Webhook Secret Token
-            <span className="text-red-500 ml-1">*</span>
+            {envConfig.webhookSecretConfigured ? (
+              <span className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-slate-400" />
+                Webhook Secret Token
+              </span>
+            ) : (
+              <>
+                Webhook Secret Token
+                <span className="text-red-500 ml-1">*</span>
+              </>
+            )}
           </label>
-          <input
-            type="text"
-            value={webhookSecret}
-            onChange={(e) => onWebhookSecretChange(e.target.value)}
-            placeholder="Enter the Secret Token from your webhook configuration"
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <p className="text-xs text-slate-500 mt-2">
-            This is generated by Zoom when you add the webhook endpoint
-          </p>
+          {envConfig.webhookSecretConfigured ? (
+            <div className="relative">
+              <input
+                type="password"
+                value="********************************"
+                disabled
+                className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-mono cursor-not-allowed"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-md">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Configured
+                </span>
+              </div>
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={webhookSecret}
+              onChange={(e) => onWebhookSecretChange(e.target.value)}
+              placeholder="Enter the Secret Token from your webhook configuration"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          )}
+          {envConfig.webhookSecretConfigured ? (
+            <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-slate-600">
+                  <strong>Need to change this?</strong> Update your secrets in Bolt or environment variables in Netlify.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 mt-2">
+              This is generated by Zoom when you add the webhook endpoint
+            </p>
+          )}
         </div>
       </div>
     </div>

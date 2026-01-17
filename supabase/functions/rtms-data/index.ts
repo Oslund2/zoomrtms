@@ -66,23 +66,36 @@ Deno.serve(async (req: Request) => {
         .eq("id", meeting.id)
         .maybeSingle();
 
-      // Check for duplicate transcript (same meeting, timestamp, and content)
-      const { data: existingTranscript } = await supabase
+      // Check for duplicate transcript with time window (5 seconds)
+      // This catches duplicates even if timestamp varies slightly
+      const timeWindowMs = 5000; // 5 seconds
+      const { data: existingTranscripts } = await supabase
         .from("transcripts")
-        .select("id")
+        .select("id, timestamp_ms, content")
         .eq("meeting_id", meeting.id)
-        .eq("timestamp_ms", timestamp_ms)
-        .eq("content", content)
-        .maybeSingle();
+        .gte("timestamp_ms", timestamp_ms - timeWindowMs)
+        .lte("timestamp_ms", timestamp_ms + timeWindowMs)
+        .limit(50);
+
+      // Check if any existing transcript has identical content
+      const duplicateTranscript = existingTranscripts?.find(
+        (t) => t.content === content
+      );
 
       // If duplicate exists, return success without inserting
-      if (existingTranscript) {
+      if (duplicateTranscript) {
+        console.log(`[DUPLICATE PREVENTED] Meeting: ${meeting_uuid}, Timestamp: ${timestamp_ms}, Transcript ID: ${duplicateTranscript.id}`);
         return new Response(
           JSON.stringify({
             success: true,
             duplicate: true,
-            transcript: { id: existingTranscript.id },
-            message: "Transcript already recorded (duplicate prevented)"
+            transcript: { id: duplicateTranscript.id },
+            message: "Transcript already recorded (duplicate prevented)",
+            debug: {
+              original_timestamp: duplicateTranscript.timestamp_ms,
+              new_timestamp: timestamp_ms,
+              time_diff_ms: Math.abs(duplicateTranscript.timestamp_ms - timestamp_ms)
+            }
           }),
           {
             status: 200,

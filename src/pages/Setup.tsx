@@ -1071,6 +1071,9 @@ function Step6Test({
   const [createError, setCreateError] = useState<string | null>(null);
   const [shellType, setShellType] = useState<'curl' | 'powershell'>('curl');
   const [commandType, setCommandType] = useState<'transcript' | 'chat' | 'participant'>('transcript');
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [testContent, setTestContent] = useState('This is a test transcript from the Setup Wizard. Hello from Ambient Intelligence!');
 
   const createTestMeeting = async () => {
     setIsCreating(true);
@@ -1125,6 +1128,48 @@ function Step6Test({
     }
     createTestMeeting();
   }, []);
+
+  const sendTestTranscript = async () => {
+    if (!testMeetingUuid) return;
+
+    setIsSendingTest(true);
+    setTestResult(null);
+
+    try {
+      const response = await fetch(`${dataUrl}/transcript`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          type: 'transcript',
+          meeting_uuid: testMeetingUuid,
+          participant_id: `test-participant-${Date.now()}`,
+          speaker_name: 'Test Speaker',
+          content: testContent,
+          timestamp_ms: Date.now(),
+          is_final: true,
+          room_type: 'main',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setTestResult({ success: true, message: data.message || 'Transcript sent successfully!' });
+      } else {
+        setTestResult({ success: false, message: data.error || 'Failed to send transcript' });
+      }
+    } catch (err) {
+      setTestResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Network error occurred'
+      });
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
 
   const getCommand = () => {
     if (shellType === 'curl') {
@@ -1214,6 +1259,76 @@ function Step6Test({
               </button>
             </div>
           )}
+        </div>
+
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <Zap className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-emerald-900">Send Test Transcript</h3>
+              <p className="text-sm text-emerald-700">
+                Send a test message directly to the dashboard
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-emerald-800 mb-1">
+                Test Message
+              </label>
+              <textarea
+                value={testContent}
+                onChange={(e) => setTestContent(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                placeholder="Enter test transcript content..."
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={sendTestTranscript}
+                disabled={isSendingTest || !testMeetingUuid || !testContent.trim()}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+              >
+                {isSendingTest ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4" />
+                    Send Test Transcript
+                  </>
+                )}
+              </button>
+
+              {testResult && (
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                  testResult.success
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {testResult.success ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4" />
+                  )}
+                  <span className="text-sm font-medium">{testResult.message}</span>
+                </div>
+              )}
+            </div>
+
+            {testResult?.success && (
+              <p className="text-sm text-emerald-700">
+                Check the Dashboard or Ambient Display to see your test transcript!
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="p-4 bg-slate-50 rounded-xl">

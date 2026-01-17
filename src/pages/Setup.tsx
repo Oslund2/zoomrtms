@@ -26,6 +26,8 @@ import {
   generateNpmInstallCommand,
   generateCurlTestCommand,
   generatePowerShellTestCommand,
+  generatePowerShellChatCommand,
+  generatePowerShellParticipantCommand,
   generateCurlChatCommand,
   generateCurlParticipantCommand,
 } from '../lib/codeGenerator';
@@ -1182,7 +1184,14 @@ function Step6Test({
           return generateCurlParticipantCommand(dataUrl, testMeetingUuid || undefined);
       }
     } else {
-      return generatePowerShellTestCommand(dataUrl, testMeetingUuid || undefined);
+      switch (commandType) {
+        case 'transcript':
+          return generatePowerShellTestCommand(dataUrl, testMeetingUuid || undefined);
+        case 'chat':
+          return generatePowerShellChatCommand(dataUrl, testMeetingUuid || undefined);
+        case 'participant':
+          return generatePowerShellParticipantCommand(dataUrl, testMeetingUuid || undefined);
+      }
     }
   };
 
@@ -1358,46 +1367,42 @@ function Step6Test({
               </button>
             </div>
 
-            {shellType === 'curl' && (
-              <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1">
-                <button
-                  onClick={() => setCommandType('transcript')}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                    commandType === 'transcript'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Transcript
-                </button>
-                <button
-                  onClick={() => setCommandType('chat')}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                    commandType === 'chat'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Chat
-                </button>
-                <button
-                  onClick={() => setCommandType('participant')}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                    commandType === 'participant'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Participant
-                </button>
-              </div>
-            )}
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1">
+              <button
+                onClick={() => setCommandType('transcript')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  commandType === 'transcript'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Transcript
+              </button>
+              <button
+                onClick={() => setCommandType('chat')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  commandType === 'chat'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Chat
+              </button>
+              <button
+                onClick={() => setCommandType('participant')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  commandType === 'participant'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Participant
+              </button>
+            </div>
           </div>
 
           <p className="text-sm text-slate-600 mb-3">
-            {shellType === 'curl'
-              ? `Test ${commandType} data ingestion with this command:`
-              : 'Test transcript data ingestion with PowerShell:'}
+            Test {commandType} data ingestion with {shellType === 'curl' ? 'CURL' : 'PowerShell'}:
           </p>
 
           <div className="flex items-start gap-2 mb-2">

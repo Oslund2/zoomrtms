@@ -568,12 +568,45 @@ export function generatePowerShellTestCommand(endpoint: string, meetingUuid?: st
     type = "transcript"
     meeting_uuid = "${uuid}"
     speaker_name = "Test Speaker"
-    content = "This is a test transcript"
+    content = "This is a test transcript from PowerShell"
     timestamp_ms = [long](Get-Date -UFormat %s) * 1000
     is_final = $true
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "${endpoint}/transcript" \`
+    -Method POST \`
+    -ContentType "application/json" \`
+    -Body $body`;
+}
+
+export function generatePowerShellChatCommand(endpoint: string, meetingUuid?: string): string {
+  const uuid = meetingUuid || 'test-meeting-123';
+  return `$body = @{
+    type = "chat"
+    meeting_uuid = "${uuid}"
+    sender_name = "Test User"
+    message = "Hello from PowerShell!"
+    timestamp_ms = [long](Get-Date -UFormat %s) * 1000
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "${endpoint}/chat" \`
+    -Method POST \`
+    -ContentType "application/json" \`
+    -Body $body`;
+}
+
+export function generatePowerShellParticipantCommand(endpoint: string, meetingUuid?: string): string {
+  const uuid = meetingUuid || 'test-meeting-123';
+  return `$body = @{
+    type = "participant"
+    meeting_uuid = "${uuid}"
+    action = "joined"
+    participant_id = "test-participant-$(Get-Random)"
+    user_name = "Test Participant"
+    role = "attendee"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "${endpoint}/participant" \`
     -Method POST \`
     -ContentType "application/json" \`
     -Body $body`;

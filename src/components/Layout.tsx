@@ -1,5 +1,5 @@
-import { Outlet, NavLink, Link } from 'react-router-dom';
-import { Video, LayoutDashboard, History, Code, Menu, X, Brain, Monitor, Activity } from 'lucide-react';
+import { Outlet, NavLink } from 'react-router-dom';
+import { LayoutDashboard, History, Code, Menu, X, Brain, Monitor, Activity, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useDemoMode } from '../contexts/DemoModeContext';
 
@@ -12,12 +12,6 @@ export default function Layout() {
       toggleDemoMode();
     }
   };
-
-  const navItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/history', icon: History, label: 'Meeting History' },
-    { to: '/settings', icon: Code, label: 'Developer' },
-  ];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -43,57 +37,102 @@ export default function Layout() {
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
-              <Video className="w-6 h-6 text-white" />
+              <Sparkles className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg">RTMS Hub</h1>
+              <h1 className="font-bold text-lg">AI Companion</h1>
               <p className="text-xs text-slate-400">Zoom Meeting Streams</p>
             </div>
           </div>
 
           <nav className="space-y-2">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 ${
-                    isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`
-                }
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
-              </NavLink>
-            ))}
-          </nav>
-
-          <div className="mt-6 pt-6 border-t border-slate-700">
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-3 px-4">Ambient Intelligence</p>
-            <Link
-              to="/admin"
-              className="flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-all"
+            <NavLink
+              to="/"
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
             >
-              <Brain className="w-5 h-5" />
-              <span className="font-medium">Admin Panel</span>
-            </Link>
-            <Link
+              <LayoutDashboard className="w-5 h-5" />
+              <span className="font-medium">Dashboard</span>
+            </NavLink>
+            <NavLink
+              to="/history"
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
+            >
+              <History className="w-5 h-5" />
+              <span className="font-medium">Meeting History</span>
+            </NavLink>
+            <NavLink
               to={isDemoMode ? "/display?demo=true" : "/display"}
-              className="flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-all"
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
             >
               <Monitor className="w-5 h-5" />
               <span className="font-medium">Display View</span>
-            </Link>
-            <Link
+            </NavLink>
+          </nav>
+
+          <div className="mt-6 pt-6 border-t border-slate-700">
+            <NavLink
+              to="/admin"
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
+            >
+              <Brain className="w-5 h-5" />
+              <span className="font-medium">Room Prompts</span>
+            </NavLink>
+            <NavLink
+              to="/settings"
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
+            >
+              <Code className="w-5 h-5" />
+              <span className="font-medium">Developer</span>
+            </NavLink>
+            <NavLink
               to="/monitor"
-              className="flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-all"
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`
+              }
             >
               <Activity className="w-5 h-5" />
               <span className="font-medium">RTMS Monitor</span>
-            </Link>
+            </NavLink>
           </div>
         </div>
 

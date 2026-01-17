@@ -5,6 +5,11 @@ import type { Meeting } from '../types/database';
 
 type RoomType = 'main' | 'breakout';
 
+interface BreakoutRoomLabel {
+  roomNumber: number;
+  label: string;
+}
+
 export default function ApiTesterTab() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string>('');
@@ -17,11 +22,18 @@ export default function ApiTesterTab() {
   const [executeStatus, setExecuteStatus] = useState<{ success: boolean; message: string } | null>(null);
   const [testRecordCount, setTestRecordCount] = useState<{ meetings: number; transcripts: number } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [breakoutRoomLabels, setBreakoutRoomLabels] = useState<BreakoutRoomLabel[]>([]);
 
   useEffect(() => {
     loadMeetings();
     loadTestRecordCount();
   }, []);
+
+  useEffect(() => {
+    if (selectedMeetingId) {
+      loadBreakoutRoomLabels();
+    }
+  }, [selectedMeetingId]);
 
   const loadMeetings = async () => {
     const { data, error } = await supabase
@@ -60,6 +72,26 @@ export default function ApiTesterTab() {
     }
   };
 
+  const loadBreakoutRoomLabels = async () => {
+    const selectedMeeting = meetings.find(m => m.id === selectedMeetingId);
+    if (!selectedMeeting) return;
+
+    const { data, error } = await supabase
+      .from('meetings')
+      .select('room_number, topic')
+      .eq('room_type', 'breakout')
+      .not('room_number', 'is', null)
+      .order('room_number');
+
+    if (!error && data) {
+      const labels: BreakoutRoomLabel[] = data.map(meeting => ({
+        roomNumber: meeting.room_number!,
+        label: meeting.topic || `Breakout Room ${meeting.room_number}`
+      }));
+      setBreakoutRoomLabels(labels);
+    }
+  };
+
   const createNewTestMeeting = async () => {
     setLoading(true);
     const newMeetingUuid = crypto.randomUUID();
@@ -81,6 +113,7 @@ export default function ApiTesterTab() {
       await loadMeetings();
       setSelectedMeetingId(data.id);
       await loadTestRecordCount();
+      await loadBreakoutRoomLabels();
     }
     setLoading(false);
   };
@@ -223,7 +256,7 @@ Invoke-RestMethod -Uri "${supabaseUrl}/functions/v1/rtms-data" -Method Post -Hea
       <div className="flex items-start gap-3">
         <Terminal className="w-6 h-6 text-blue-600 mt-1" />
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">API Test Generator</h2>
+          <h2 className="text-xl font-semibold text-slate-900">RTMS Test Generator</h2>
           <p className="text-slate-500 text-sm mt-1">Generate PowerShell commands to test RTMS data ingestion</p>
         </div>
       </div>
@@ -297,9 +330,13 @@ Invoke-RestMethod -Uri "${supabaseUrl}/functions/v1/rtms-data" -Method Post -Hea
                   onChange={(e) => setRoomNumber(parseInt(e.target.value))}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                    <option key={num} value={num}>Breakout Room {num}</option>
-                  ))}
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map(num => {
+                    const labelInfo = breakoutRoomLabels.find(label => label.roomNumber === num);
+                    const displayLabel = labelInfo ? labelInfo.label : `Breakout Room ${num}`;
+                    return (
+                      <option key={num} value={num}>{displayLabel}</option>
+                    );
+                  })}
                 </select>
               </div>
             )}

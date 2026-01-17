@@ -66,6 +66,31 @@ Deno.serve(async (req: Request) => {
         .eq("id", meeting.id)
         .maybeSingle();
 
+      // Check for duplicate transcript (same meeting, timestamp, and content)
+      const { data: existingTranscript } = await supabase
+        .from("transcripts")
+        .select("id")
+        .eq("meeting_id", meeting.id)
+        .eq("timestamp_ms", timestamp_ms)
+        .eq("content", content)
+        .maybeSingle();
+
+      // If duplicate exists, return success without inserting
+      if (existingTranscript) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            duplicate: true,
+            transcript: { id: existingTranscript.id },
+            message: "Transcript already recorded (duplicate prevented)"
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
       const { data, error } = await supabase.from("transcripts").insert({
         meeting_id: meeting.id,
         participant_id: dbParticipantId,
@@ -78,6 +103,22 @@ Deno.serve(async (req: Request) => {
 
       if (error) {
         console.error("Error storing transcript:", error);
+
+        // Check if it's a unique constraint violation (duplicate)
+        if (error.code === "23505" || error.message?.includes("duplicate")) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              duplicate: true,
+              message: "Transcript already recorded (duplicate prevented)"
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+
         return new Response(
           JSON.stringify({ error: "Failed to store transcript" }),
           {

@@ -380,7 +380,7 @@ function Step1CreateApp({
               <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                 1
               </span>
-              Click "Create" button
+              Click "Create\" button
             </li>
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -918,7 +918,7 @@ function Step4Scopes({
               <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                 4
               </span>
-              Look for "Features" or "Real-Time Media Streaming" section in your app settings
+              Look for "Features\" or "Real-Time Media Streaming\" section in your app settings
             </li>
             <li className="flex items-start gap-2">
               <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">

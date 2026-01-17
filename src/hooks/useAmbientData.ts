@@ -17,6 +17,7 @@ interface GraphNode {
   size: number;
   roomMentions: Record<string, number>;
   importance: number;
+  energy: number;
 }
 
 interface GraphEdge {
@@ -118,21 +119,45 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
     if (isDemoMode) {
       await new Promise(resolve => setTimeout(resolve, 400));
 
-      const rawNodes = demoData.topicNodes.slice(0, 25);
-      const nodeIds = rawNodes.map((n) => n.id);
+      const calculateEnergy = (node: TopicNode) => {
+        const mentionCount = node.mention_count || 1;
+        const roomCount = Object.keys(node.room_mentions as Record<string, number>).length;
+        const recencyScore = 1.0;
+
+        const energy = (mentionCount * 0.4) + (roomCount * 0.3) + (node.importance_score * 0.3);
+        return energy * recencyScore;
+      };
+
+      const rankedNodes = demoData.topicNodes
+        .map((n) => ({
+          ...n,
+          energyScore: calculateEnergy(n),
+        }))
+        .sort((a, b) => b.energyScore - a.energyScore)
+        .slice(0, 10);
+
+      const nodeIds = rankedNodes.map((n) => n.id);
       const rawEdges = demoData.topicEdges.filter(
         (e) => nodeIds.includes(e.source_node_id) && nodeIds.includes(e.target_node_id)
       );
 
       setNodes(
-        rawNodes.map((n) => ({
-          id: n.id,
-          label: n.label,
-          category: n.category,
-          size: Math.min(50, 10 + n.mention_count * 3),
-          roomMentions: n.room_mentions as Record<string, number>,
-          importance: n.importance_score,
-        }))
+        rankedNodes.map((n) => {
+          const energy = n.energyScore;
+          const baseSize = 20;
+          const energyMultiplier = 1 + (energy / 10);
+          const calculatedSize = baseSize * energyMultiplier;
+
+          return {
+            id: n.id,
+            label: n.label,
+            category: n.category,
+            size: Math.max(25, Math.min(60, calculatedSize)),
+            roomMentions: n.room_mentions as Record<string, number>,
+            importance: n.importance_score,
+            energy: energy,
+          };
+        })
       );
 
       setEdges(
@@ -158,7 +183,32 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
       .order('importance_score', { ascending: false })
       .limit(50);
 
-    const nodeIds = rawNodes?.map((n) => n.id) || [];
+    if (!rawNodes || rawNodes.length === 0) {
+      setNodes([]);
+      setEdges([]);
+      setLoading(false);
+      return;
+    }
+
+    const calculateEnergy = (node: TopicNode) => {
+      const mentionCount = node.mention_count || 1;
+      const roomCount = Object.keys(node.room_mentions as Record<string, number>).length;
+      const timeSinceLastSeen = Date.now() - new Date(node.last_seen).getTime();
+      const recencyScore = Math.max(0.1, 1 - (timeSinceLastSeen / (60 * 60 * 1000)));
+
+      const energy = (mentionCount * 0.4) + (roomCount * 0.3) + (node.importance_score * 0.3);
+      return energy * recencyScore;
+    };
+
+    const rankedNodes = rawNodes
+      .map((n) => ({
+        ...n,
+        energyScore: calculateEnergy(n),
+      }))
+      .sort((a, b) => b.energyScore - a.energyScore)
+      .slice(0, 10);
+
+    const nodeIds = rankedNodes.map((n) => n.id);
 
     let rawEdges: TopicEdge[] = [];
     if (nodeIds.length > 0) {
@@ -171,14 +221,22 @@ export function useKnowledgeGraph(sinceMinutes = 60) {
     }
 
     setNodes(
-      rawNodes?.map((n) => ({
-        id: n.id,
-        label: n.label,
-        category: n.category,
-        size: Math.min(50, 10 + n.mention_count * 3),
-        roomMentions: n.room_mentions as Record<string, number>,
-        importance: n.importance_score,
-      })) || []
+      rankedNodes.map((n) => {
+        const energy = n.energyScore;
+        const baseSize = 20;
+        const energyMultiplier = 1 + (energy / 10);
+        const calculatedSize = baseSize * energyMultiplier;
+
+        return {
+          id: n.id,
+          label: n.label,
+          category: n.category,
+          size: Math.max(25, Math.min(60, calculatedSize)),
+          roomMentions: n.room_mentions as Record<string, number>,
+          importance: n.importance_score,
+          energy: energy,
+        };
+      })
     );
 
     setEdges(

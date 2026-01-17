@@ -325,7 +325,7 @@ function StatPill({
   );
 }
 
-function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: string; category: string | null; size: number; importance: number; roomMentions: Record<string, number> }[]; edges: { source: string; target: string }[] }) {
+function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: string; category: string | null; size: number; importance: number; roomMentions: Record<string, number>; energy: number }[]; edges: { source: string; target: string }[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
@@ -858,6 +858,7 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
   const feedRef = useRef<HTMLDivElement>(null);
   const { selectedTopic, selectedRoom } = useAmbientSelection();
   const [autoScroll, setAutoScroll] = useState(true);
+  const scrollAnimationRef = useRef<number>();
 
   const filteredInsights = insights.filter((insight) => {
     if (selectedTopic && !insight.related_topics.includes(selectedTopic.label)) {
@@ -874,18 +875,30 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
     if (!feed || !autoScroll) return;
 
     let scrollPosition = 0;
-    const scrollSpeed = 0.5;
+    const scrollSpeed = 0.3;
+    let lastTime = performance.now();
 
-    const scroll = () => {
-      scrollPosition += scrollSpeed;
+    const smoothScroll = (currentTime: number) => {
+      const deltaTime = currentTime - lastTime;
+      lastTime = currentTime;
+
+      scrollPosition += scrollSpeed * (deltaTime / 16);
+
       if (scrollPosition >= feed.scrollHeight - feed.clientHeight) {
         scrollPosition = 0;
       }
+
       feed.scrollTop = scrollPosition;
+      scrollAnimationRef.current = requestAnimationFrame(smoothScroll);
     };
 
-    const interval = setInterval(scroll, 50);
-    return () => clearInterval(interval);
+    scrollAnimationRef.current = requestAnimationFrame(smoothScroll);
+
+    return () => {
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
+    };
   }, [filteredInsights, autoScroll]);
 
   const handleScroll = () => {
@@ -948,15 +961,19 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
             </div>
           </div>
         ) : (
-          filteredInsights.map((insight) => {
+          filteredInsights.map((insight, index) => {
             const Icon = getInsightIcon(insight.insight_type);
             const hasMatchingTopic = selectedTopic && insight.related_topics.includes(selectedTopic.label);
             return (
               <div
                 key={insight.id}
-                className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border ${getInsightColors(insight.insight_type, insight.severity)} transition-all ${
+                className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border ${getInsightColors(insight.insight_type, insight.severity)} transition-all duration-500 ease-out animate-in fade-in slide-in-from-top-4 ${
                   hasMatchingTopic ? 'ring-2 ring-blue-400/50' : ''
                 }`}
+                style={{
+                  animationDelay: `${index * 50}ms`,
+                  animationFillMode: 'backwards'
+                }}
               >
                 <div className="flex items-start gap-2 sm:gap-3">
                   <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${

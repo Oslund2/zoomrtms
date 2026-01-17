@@ -62,9 +62,11 @@ Deno.serve(async (req: Request) => {
 
       const { data: meetingInfo } = await supabase
         .from("meetings")
-        .select("room_number")
+        .select("room_number, room_type")
         .eq("id", meeting.id)
         .maybeSingle();
+
+      const effectiveRoomNumber = meetingInfo?.room_number ?? (meetingInfo?.room_type === 'breakout' ? 1 : 0);
 
       // Check for duplicate transcript with time window (5 seconds)
       // This catches duplicates even if timestamp varies slightly
@@ -145,9 +147,9 @@ Deno.serve(async (req: Request) => {
         await supabase.from("analysis_queue").insert({
           transcript_id: data[0].id,
           meeting_id: meeting.id,
-          room_number: meetingInfo?.room_number ?? 0,
+          room_number: effectiveRoomNumber,
           status: "pending",
-          priority: (meetingInfo?.room_number ?? 0) === 0 ? 10 : 5,
+          priority: effectiveRoomNumber === 0 ? 10 : 5,
         });
       }
 

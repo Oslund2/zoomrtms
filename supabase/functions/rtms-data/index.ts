@@ -27,7 +27,10 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
 
-    if (action === "transcript" || req.method === "POST" && body.type === "transcript") {
+    // Determine action from body.type first, then fall back to URL path
+    const requestType = body.type || action;
+
+    if (requestType === "transcript" || (req.method === "POST" && body.speaker_name && body.content)) {
       const { meeting_uuid, speaker_name, content, timestamp_ms, participant_id, is_final, sequence } = body;
 
       const { data: meeting } = await supabase
@@ -102,7 +105,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (action === "chat" || body.type === "chat") {
+    if (requestType === "chat" || (body.message && body.sender_name)) {
       const { meeting_uuid, sender_name, message, message_type, recipient, timestamp_ms, participant_id } = body;
 
       const { data: meeting } = await supabase
@@ -161,7 +164,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (action === "media-event" || body.type === "media_event") {
+    if (requestType === "media-event" || requestType === "media_event" || (body.event_type && body.action)) {
       const { meeting_uuid, event_type, participant_id, action: eventAction, bytes_processed, metadata } = body;
 
       const { data: meeting } = await supabase
@@ -219,7 +222,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (action === "participant" || body.type === "participant") {
+    if (requestType === "participant" || (body.participant_id && body.action)) {
       const { meeting_uuid, participant_id, user_name, email, role, action: participantAction } = body;
 
       const { data: meeting } = await supabase

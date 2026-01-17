@@ -481,6 +481,24 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
         ctx.stroke();
       }
 
+      // Draw grip handle inside the TOP of the circle
+      const handleY = pos.y - size / 4;
+      const dotRadius = 1.5;
+      const dotSpacingX = 4;
+      const dotSpacingY = 3;
+      const handleOpacity = (isHovered || isDragged) ? 0.9 : 0.35;
+
+      ctx.fillStyle = `rgba(255, 255, 255, ${handleOpacity})`;
+      for (let row = 0; row < 2; row++) {
+        for (let col = 0; col < 3; col++) {
+          const dotX = pos.x + (col - 1) * dotSpacingX;
+          const dotY = handleY + row * dotSpacingY;
+          ctx.beginPath();
+          ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
       ctx.fillStyle = '#ffffff';
       ctx.font = `${isSelected ? 'bold ' : ''}${Math.max(10, size / 3)}px Inter, system-ui, sans-serif`;
       ctx.textAlign = 'center';
@@ -523,8 +541,8 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / 2;
-    const y = (e.clientY - rect.top) / 2;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     clickStartPos.current = { x, y };
 
@@ -540,8 +558,8 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / 2;
-    const y = (e.clientY - rect.top) / 2;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     if (draggedNodeId && clickStartPos.current) {
       const dx = x - clickStartPos.current.x;
@@ -602,8 +620,8 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
 
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
-    const x = (touch.clientX - rect.left) * (canvas.width / rect.width / 2);
-    const y = (touch.clientY - rect.top) * (canvas.height / rect.height / 2);
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
 
     clickStartPos.current = { x, y };
 
@@ -620,8 +638,8 @@ function KnowledgeGraphPanel({ nodes, edges }: { nodes: { id: string; label: str
 
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
-    const x = (touch.clientX - rect.left) * (canvas.width / rect.width / 2);
-    const y = (touch.clientY - rect.top) * (canvas.height / rect.height / 2);
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
 
     if (draggedNodeId && clickStartPos.current) {
       const dx = x - clickStartPos.current.x;

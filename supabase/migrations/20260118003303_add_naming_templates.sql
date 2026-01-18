@@ -67,67 +67,99 @@ CREATE POLICY "Authenticated users can delete custom templates"
 INSERT INTO naming_templates (name, template_pattern, description, is_default, category, sort_order)
 VALUES
   (
-    'Team Discussion',
-    'Team Discussion - Breakout Room {ROOM_NUMBER}',
-    'General team discussion format for breakout rooms',
+    'All Participants',
+    'All Participants - Breakout Room {ROOM_NUMBER}',
+    'General meeting format for all participants',
     true,
-    'meeting',
+    'general',
     1
   ),
   (
-    'Working Session',
-    'Working Session - Breakout Room {ROOM_NUMBER}',
-    'Collaborative working session format',
+    'HR',
+    'HR - Breakout Room {ROOM_NUMBER}',
+    'Human Resources department format',
     true,
-    'workshop',
+    'department',
     2
   ),
   (
-    'Department Meeting',
-    'Department Meeting - Breakout Room {ROOM_NUMBER}',
-    'Department-specific meeting format',
+    'Finance',
+    'Finance - Breakout Room {ROOM_NUMBER}',
+    'Finance department format',
     true,
-    'meeting',
+    'department',
     3
   ),
   (
-    'Project Workshop',
-    'Project Workshop - Breakout Room {ROOM_NUMBER}',
-    'Project-focused workshop format',
+    'Legal',
+    'Legal - Breakout Room {ROOM_NUMBER}',
+    'Legal department format',
     true,
-    'workshop',
+    'department',
     4
   ),
   (
-    'Training Session',
-    'Training Session - Breakout Room {ROOM_NUMBER}',
-    'Training and learning format',
+    'Revenue',
+    'Revenue - Breakout Room {ROOM_NUMBER}',
+    'Revenue department format',
     true,
-    'training',
+    'department',
     5
   ),
   (
-    'Daily Standup',
-    'Daily Standup - Breakout Room {ROOM_NUMBER}',
-    'Quick daily sync meeting format',
+    'Local News',
+    'Local News - Breakout Room {ROOM_NUMBER}',
+    'Local news coverage format',
     true,
-    'standup',
+    'news',
     6
   ),
   (
-    'Sprint Planning',
-    'Sprint Planning - Breakout Room {ROOM_NUMBER}',
-    'Sprint planning session format',
+    'National News',
+    'National News - Breakout Room {ROOM_NUMBER}',
+    'National news coverage format',
     true,
-    'planning',
+    'news',
     7
   ),
   (
-    'Client Meeting',
-    'Client Meeting - Breakout Room {ROOM_NUMBER}',
-    'Client-facing meeting format',
+    'Marketing',
+    'Marketing - Breakout Room {ROOM_NUMBER}',
+    'Marketing department format',
     true,
-    'client',
+    'department',
     8
+  ),
+  (
+    'Promotion',
+    'Promotion - Breakout Room {ROOM_NUMBER}',
+    'Promotional activities format',
+    true,
+    'marketing',
+    9
+  ),
+  (
+    'AI',
+    'AI - Breakout Room {ROOM_NUMBER}',
+    'Artificial Intelligence topics format',
+    true,
+    'technology',
+    10
+  ),
+  (
+    'Communications',
+    'Communications - Breakout Room {ROOM_NUMBER}',
+    'Communications department format',
+    true,
+    'department',
+    11
+  ),
+  (
+    'C-Suite',
+    'C-Suite - Breakout Room {ROOM_NUMBER}',
+    'Executive leadership format',
+    true,
+    'executive',
+    12
   )
 ON CONFLICT DO NOTHING;

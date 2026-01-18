@@ -12,7 +12,11 @@ export default function NamingGuide({ roomType }: NamingGuideProps) {
     <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
       <button
         type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsExpanded(!isExpanded);
+        }}
         className="w-full flex items-center justify-between p-4 hover:bg-slate-100 transition-colors"
       >
         <div className="flex items-center gap-2">

@@ -170,7 +170,7 @@ Deno.serve(async (req: Request) => {
     const requestType = body.type || action;
 
     if (requestType === "transcript" || (req.method === "POST" && body.speaker_name && body.content)) {
-      const { meeting_uuid, speaker_name, content, timestamp_ms, participant_id, is_final, sequence } = body;
+      const { meeting_uuid, speaker_name, content, timestamp_ms, participant_id, is_final, sequence, immediate } = body;
 
       const { data: meeting } = await supabase
         .from("meetings")
@@ -206,6 +206,80 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       const effectiveRoomNumber = meetingInfo?.room_number ?? (meetingInfo?.room_type === 'breakout' ? 1 : 0);
+
+      // If immediate flag is set, insert directly (for testing)
+      if (immediate) {
+        // Check for duplicates
+        const { data: existingTranscript } = await supabase
+          .from("transcripts")
+          .select("id")
+          .eq("meeting_id", meeting.id)
+          .eq("content", content)
+          .gte("timestamp_ms", timestamp_ms - 5000)
+          .lte("timestamp_ms", timestamp_ms + 5000)
+          .maybeSingle();
+
+        if (existingTranscript) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              duplicate: true,
+              message: "Transcript already exists"
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+
+        const { data: transcript, error } = await supabase
+          .from("transcripts")
+          .insert({
+            meeting_id: meeting.id,
+            participant_id: dbParticipantId,
+            speaker_name,
+            content,
+            timestamp_ms,
+            sequence: sequence ?? null,
+            is_final: is_final ?? true,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error inserting transcript:", error);
+          return new Response(
+            JSON.stringify({ error: "Failed to insert transcript" }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+
+        // Queue for analysis if final
+        if (is_final ?? true) {
+          await supabase.from("analysis_queue").insert({
+            transcript_id: transcript.id,
+            meeting_id: meeting.id,
+            room_number: effectiveRoomNumber,
+            status: "pending",
+            priority: effectiveRoomNumber === 0 ? 10 : 5,
+          });
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            immediate: true,
+            transcript_id: transcript.id,
+            message: "Transcript inserted immediately"
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
 
       // Add to buffer instead of inserting immediately
       addTranscriptToBuffer({

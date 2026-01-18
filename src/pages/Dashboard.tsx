@@ -114,7 +114,7 @@ export default function Dashboard() {
 
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Transformation Dashboard</h1>
           <p className="text-slate-500 mt-1">Monitor your Zoom RTMS streams in real-time</p>
         </div>
         <button

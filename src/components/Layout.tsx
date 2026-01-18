@@ -40,7 +40,7 @@ export default function Layout() {
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg">AI Companion</h1>
+              <h1 className="font-bold text-lg">Scripps</h1>
               <p className="text-xs text-slate-400">Zoom Meeting Streams</p>
             </div>
           </div>
@@ -58,7 +58,7 @@ export default function Layout() {
               }
             >
               <LayoutDashboard className="w-5 h-5" />
-              <span className="font-medium">Dashboard</span>
+              <span className="font-medium">Transformation Dashboard</span>
             </NavLink>
             <NavLink
               to="/history"

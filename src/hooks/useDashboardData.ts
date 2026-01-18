@@ -139,13 +139,13 @@ export function useDashboardData() {
       .channel('dashboard-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, fetchData)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transcripts' }, fetchData)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transcripts' }, fetchTranscriptsOnly)
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchData, isDemoMode]);
+  }, [fetchData, fetchTranscriptsOnly, isDemoMode]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {

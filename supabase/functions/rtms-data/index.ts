@@ -12,6 +12,145 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
+// Transcript buffering system for batching and reordering
+interface BufferedTranscript {
+  meeting_id: number;
+  participant_id: number | null;
+  speaker_name: string;
+  content: string;
+  timestamp_ms: number;
+  sequence: number | null;
+  is_final: boolean;
+  room_number: number;
+  received_at: number;
+}
+
+interface TranscriptBuffer {
+  transcripts: BufferedTranscript[];
+  timer: number | null;
+}
+
+const buffers = new Map<number, TranscriptBuffer>();
+const BUFFER_TIMEOUT_MS = 2500; // 2.5 seconds to collect and reorder transcripts
+
+async function flushTranscriptBuffer(meetingId: number) {
+  const buffer = buffers.get(meetingId);
+  if (!buffer || buffer.transcripts.length === 0) {
+    return;
+  }
+
+  // Clear the timer
+  if (buffer.timer) {
+    clearTimeout(buffer.timer);
+  }
+
+  // Take all transcripts and clear buffer immediately
+  const transcriptsToProcess = [...buffer.transcripts];
+  buffer.transcripts = [];
+  buffer.timer = null;
+
+  // Sort by sequence number (nulls last), then by timestamp
+  transcriptsToProcess.sort((a, b) => {
+    if (a.sequence !== null && b.sequence !== null) {
+      return a.sequence - b.sequence;
+    }
+    if (a.sequence !== null) return -1;
+    if (b.sequence !== null) return 1;
+    return a.timestamp_ms - b.timestamp_ms;
+  });
+
+  console.log(`[BATCH] Flushing ${transcriptsToProcess.length} transcripts for meeting ${meetingId}`);
+
+  // Get all existing transcripts in relevant time window for duplicate detection
+  const timestamps = transcriptsToProcess.map(t => t.timestamp_ms);
+  const minTimestamp = Math.min(...timestamps);
+  const maxTimestamp = Math.max(...timestamps);
+  const timeWindowMs = 5000;
+
+  const { data: existingTranscripts } = await supabase
+    .from("transcripts")
+    .select("id, timestamp_ms, content")
+    .eq("meeting_id", meetingId)
+    .gte("timestamp_ms", minTimestamp - timeWindowMs)
+    .lte("timestamp_ms", maxTimestamp + timeWindowMs);
+
+  const existingContentSet = new Set(
+    existingTranscripts?.map(t => t.content) || []
+  );
+
+  // Filter out duplicates
+  const uniqueTranscripts = transcriptsToProcess.filter(
+    t => !existingContentSet.has(t.content)
+  );
+
+  if (uniqueTranscripts.length === 0) {
+    console.log(`[BATCH] All ${transcriptsToProcess.length} transcripts were duplicates, skipping insert`);
+    return;
+  }
+
+  console.log(`[BATCH] Inserting ${uniqueTranscripts.length} unique transcripts (filtered ${transcriptsToProcess.length - uniqueTranscripts.length} duplicates)`);
+
+  // Batch insert all unique transcripts
+  const { data: insertedTranscripts, error } = await supabase
+    .from("transcripts")
+    .insert(
+      uniqueTranscripts.map(t => ({
+        meeting_id: t.meeting_id,
+        participant_id: t.participant_id,
+        speaker_name: t.speaker_name,
+        content: t.content,
+        timestamp_ms: t.timestamp_ms,
+        sequence: t.sequence,
+        is_final: t.is_final,
+      }))
+    )
+    .select();
+
+  if (error) {
+    console.error("[BATCH] Error inserting transcripts:", error);
+    return;
+  }
+
+  // Queue final transcripts for analysis
+  const analysisQueue = insertedTranscripts
+    ?.filter((_, idx) => uniqueTranscripts[idx].is_final)
+    .map((transcript, idx) => ({
+      transcript_id: transcript.id,
+      meeting_id: meetingId,
+      room_number: uniqueTranscripts[idx].room_number,
+      status: "pending",
+      priority: uniqueTranscripts[idx].room_number === 0 ? 10 : 5,
+    })) || [];
+
+  if (analysisQueue.length > 0) {
+    await supabase.from("analysis_queue").insert(analysisQueue);
+  }
+
+  console.log(`[BATCH] Successfully inserted ${insertedTranscripts?.length || 0} transcripts, queued ${analysisQueue.length} for analysis`);
+}
+
+function addTranscriptToBuffer(transcript: BufferedTranscript) {
+  const meetingId = transcript.meeting_id;
+
+  let buffer = buffers.get(meetingId);
+  if (!buffer) {
+    buffer = { transcripts: [], timer: null };
+    buffers.set(meetingId, buffer);
+  }
+
+  // Add transcript to buffer
+  buffer.transcripts.push(transcript);
+
+  // Reset timer
+  if (buffer.timer) {
+    clearTimeout(buffer.timer);
+  }
+
+  buffer.timer = setTimeout(() => {
+    flushTranscriptBuffer(meetingId);
+  }, BUFFER_TIMEOUT_MS);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -68,93 +207,25 @@ Deno.serve(async (req: Request) => {
 
       const effectiveRoomNumber = meetingInfo?.room_number ?? (meetingInfo?.room_type === 'breakout' ? 1 : 0);
 
-      // Check for duplicate transcript with time window (5 seconds)
-      // This catches duplicates even if timestamp varies slightly
-      const timeWindowMs = 5000; // 5 seconds
-      const { data: existingTranscripts } = await supabase
-        .from("transcripts")
-        .select("id, timestamp_ms, content")
-        .eq("meeting_id", meeting.id)
-        .gte("timestamp_ms", timestamp_ms - timeWindowMs)
-        .lte("timestamp_ms", timestamp_ms + timeWindowMs)
-        .limit(50);
-
-      // Check if any existing transcript has identical content
-      const duplicateTranscript = existingTranscripts?.find(
-        (t) => t.content === content
-      );
-
-      // If duplicate exists, return success without inserting
-      if (duplicateTranscript) {
-        console.log(`[DUPLICATE PREVENTED] Meeting: ${meeting_uuid}, Timestamp: ${timestamp_ms}, Transcript ID: ${duplicateTranscript.id}`);
-        return new Response(
-          JSON.stringify({
-            success: true,
-            duplicate: true,
-            transcript: { id: duplicateTranscript.id },
-            message: "Transcript already recorded (duplicate prevented)",
-            debug: {
-              original_timestamp: duplicateTranscript.timestamp_ms,
-              new_timestamp: timestamp_ms,
-              time_diff_ms: Math.abs(duplicateTranscript.timestamp_ms - timestamp_ms)
-            }
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      const { data, error } = await supabase.from("transcripts").insert({
+      // Add to buffer instead of inserting immediately
+      addTranscriptToBuffer({
         meeting_id: meeting.id,
         participant_id: dbParticipantId,
         speaker_name,
         content,
         timestamp_ms,
-        sequence,
+        sequence: sequence ?? null,
         is_final: is_final ?? true,
-      }).select();
-
-      if (error) {
-        console.error("Error storing transcript:", error);
-
-        // Check if it's a unique constraint violation (duplicate)
-        if (error.code === "23505" || error.message?.includes("duplicate")) {
-          return new Response(
-            JSON.stringify({
-              success: true,
-              duplicate: true,
-              message: "Transcript already recorded (duplicate prevented)"
-            }),
-            {
-              status: 200,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          );
-        }
-
-        return new Response(
-          JSON.stringify({ error: "Failed to store transcript" }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      if ((is_final ?? true) && data?.[0]?.id) {
-        await supabase.from("analysis_queue").insert({
-          transcript_id: data[0].id,
-          meeting_id: meeting.id,
-          room_number: effectiveRoomNumber,
-          status: "pending",
-          priority: effectiveRoomNumber === 0 ? 10 : 5,
-        });
-      }
+        room_number: effectiveRoomNumber,
+        received_at: Date.now(),
+      });
 
       return new Response(
-        JSON.stringify({ success: true, transcript: data?.[0] }),
+        JSON.stringify({
+          success: true,
+          buffered: true,
+          message: "Transcript queued for batch processing"
+        }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }

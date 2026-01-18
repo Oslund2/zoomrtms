@@ -73,10 +73,10 @@ export function generateMeetingName(
   template?: string
 ): string {
   if (roomType === 'main') {
-    return baseName || 'Team Meeting';
+    return baseName || 'All Participants';
   }
 
-  const base = baseName || 'Team Discussion';
+  const base = baseName || 'All Participants';
   const room = roomNumber || 1;
 
   if (template) {
@@ -159,13 +159,17 @@ export function detectRoomInfo(name: string): {
 
 export function getQuickPresets(): Array<{ name: string; category: string }> {
   return [
-    { name: 'Team Discussion', category: 'meeting' },
-    { name: 'Working Session', category: 'workshop' },
-    { name: 'Daily Standup', category: 'standup' },
-    { name: 'Sprint Planning', category: 'planning' },
-    { name: 'Department Meeting', category: 'meeting' },
-    { name: 'Training Session', category: 'training' },
-    { name: 'Client Meeting', category: 'client' },
-    { name: 'Project Workshop', category: 'workshop' },
+    { name: 'All Participants', category: 'general' },
+    { name: 'HR', category: 'department' },
+    { name: 'Finance', category: 'department' },
+    { name: 'Legal', category: 'department' },
+    { name: 'Revenue', category: 'department' },
+    { name: 'Local News', category: 'news' },
+    { name: 'National News', category: 'news' },
+    { name: 'Marketing', category: 'department' },
+    { name: 'Promotion', category: 'marketing' },
+    { name: 'AI', category: 'technology' },
+    { name: 'Communications', category: 'department' },
+    { name: 'C-Suite', category: 'executive' },
   ];
 }

@@ -52,15 +52,15 @@ export default function NamingGuide({ roomType }: NamingGuideProps) {
                 <ul className="space-y-1 text-sm text-slate-600">
                   <li className="flex items-start gap-2">
                     <span className="text-emerald-500">✓</span>
-                    <span>Team Discussion - Breakout Room 1</span>
+                    <span>All Participants - Breakout Room 1</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-emerald-500">✓</span>
-                    <span>Project Planning - Breakout Room 3</span>
+                    <span>Finance - Breakout Room 3</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-emerald-500">✓</span>
-                    <span>Marketing Workshop - Breakout Room 5</span>
+                    <span>Marketing - Breakout Room 5</span>
                   </li>
                 </ul>
               </div>
@@ -73,15 +73,15 @@ export default function NamingGuide({ roomType }: NamingGuideProps) {
                 <ul className="space-y-1 text-sm text-slate-600">
                   <li className="flex items-start gap-2">
                     <span className="text-red-500">✗</span>
-                    <span>Team Discussion - Room 1 (missing "Breakout")</span>
+                    <span>All Participants - Room 1 (missing "Breakout")</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-red-500">✗</span>
-                    <span>Project Planning - Breakout Room 9 (invalid number)</span>
+                    <span>Finance - Breakout Room 9 (invalid number)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-red-500">✗</span>
-                    <span>Marketing Workshop (missing room designation)</span>
+                    <span>Marketing (missing room designation)</span>
                   </li>
                 </ul>
               </div>

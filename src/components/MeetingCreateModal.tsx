@@ -108,7 +108,7 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
     if (!isEditMode && autoNaming && roomType === 'breakout') {
       const currentBase = topic.replace(/\s*-?\s*Breakout\s+Room\s+\d+/gi, '').trim();
       if (!currentBase || currentBase === topic) {
-        const newName = generateMeetingName('Team Discussion', 'breakout', roomNumber);
+        const newName = generateMeetingName('All Participants', 'breakout', roomNumber);
         setTopic(newName);
       } else {
         const newName = generateMeetingName(currentBase, 'breakout', roomNumber);

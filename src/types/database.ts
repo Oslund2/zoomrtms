@@ -442,6 +442,41 @@ export interface Database {
           processed_at?: string | null;
         };
       };
+      naming_templates: {
+        Row: {
+          id: string;
+          name: string;
+          template_pattern: string;
+          description: string | null;
+          is_default: boolean;
+          category: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          template_pattern: string;
+          description?: string | null;
+          is_default?: boolean;
+          category?: string;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          template_pattern?: string;
+          description?: string | null;
+          is_default?: boolean;
+          category?: string;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 }
@@ -458,3 +493,4 @@ export type TopicNode = Database['public']['Tables']['topic_nodes']['Row'];
 export type TopicEdge = Database['public']['Tables']['topic_edges']['Row'];
 export type InsightEvent = Database['public']['Tables']['insight_events']['Row'];
 export type AnalysisQueueItem = Database['public']['Tables']['analysis_queue']['Row'];
+export type NamingTemplate = Database['public']['Tables']['naming_templates']['Row'];

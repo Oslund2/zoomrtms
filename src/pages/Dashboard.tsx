@@ -21,6 +21,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import RoomGrid from '../components/RoomGrid';
 import MeetingCreateModal from '../components/MeetingCreateModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
+import NamingWarningBanner from '../components/NamingWarningBanner';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useDemoMode } from '../contexts/DemoModeContext';
 
@@ -123,6 +124,10 @@ export default function Dashboard() {
           <Plus className="w-5 h-5" />
           <span className="hidden sm:inline">New Meeting</span>
         </button>
+      </div>
+
+      <div className="mb-6">
+        <NamingWarningBanner />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

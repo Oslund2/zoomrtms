@@ -1,7 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Mic, Loader2, CheckCircle2, Users, Pencil, Upload, ImageIcon, Trash2 } from 'lucide-react';
+import { X, Mic, Loader2, CheckCircle2, Users, Pencil, Upload, ImageIcon, Trash2, Sparkles, AlertCircle, Check, Wand2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Meeting } from '../types/database';
+import NamingGuide from './NamingGuide';
+import {
+  validateMeetingName,
+  generateMeetingName,
+  applyTemplate,
+  getQuickPresets,
+  type NamingTemplate,
+  type NamingValidationResult,
+} from '../lib/namingUtils';
 
 interface MeetingCreateModalProps {
   isOpen: boolean;
@@ -23,9 +32,14 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
   const [existingIconUrl, setExistingIconUrl] = useState<string | null>(null);
   const [removeIcon, setRemoveIcon] = useState(false);
   const [occupiedRooms, setOccupiedRooms] = useState<Set<number>>(new Set());
+  const [templates, setTemplates] = useState<NamingTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [autoNaming, setAutoNaming] = useState(true);
+  const [validation, setValidation] = useState<NamingValidationResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditMode = !!editMeeting;
+  const quickPresets = getQuickPresets();
 
   useEffect(() => {
     if (editMeeting) {
@@ -50,19 +64,19 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
   }, [editMeeting, isOpen]);
 
   useEffect(() => {
-    const fetchOccupiedRooms = async () => {
+    const fetchData = async () => {
       if (!isOpen) return;
 
-      const { data, error } = await supabase
+      const { data: roomsData, error: roomsError } = await supabase
         .from('meetings')
         .select('room_number')
         .eq('room_type', 'breakout')
         .eq('status', 'active')
         .not('room_number', 'is', null);
 
-      if (!error && data) {
+      if (!roomsError && roomsData) {
         const occupied = new Set<number>();
-        data.forEach((meeting) => {
+        roomsData.forEach((meeting) => {
           if (meeting.room_number !== null) {
             if (!editMeeting || meeting.room_number !== editMeeting.room_number) {
               occupied.add(meeting.room_number);
@@ -71,10 +85,61 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
         });
         setOccupiedRooms(occupied);
       }
+
+      const { data: templatesData, error: templatesError } = await supabase
+        .from('naming_templates')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (!templatesError && templatesData) {
+        setTemplates(templatesData);
+      }
     };
 
-    fetchOccupiedRooms();
+    fetchData();
   }, [isOpen, editMeeting]);
+
+  useEffect(() => {
+    const result = validateMeetingName(topic, roomType, roomType === 'breakout' ? roomNumber : undefined);
+    setValidation(result);
+  }, [topic, roomType, roomNumber]);
+
+  useEffect(() => {
+    if (!isEditMode && autoNaming && roomType === 'breakout') {
+      const currentBase = topic.replace(/\s*-?\s*Breakout\s+Room\s+\d+/gi, '').trim();
+      if (!currentBase || currentBase === topic) {
+        const newName = generateMeetingName('Team Discussion', 'breakout', roomNumber);
+        setTopic(newName);
+      } else {
+        const newName = generateMeetingName(currentBase, 'breakout', roomNumber);
+        setTopic(newName);
+      }
+    }
+  }, [roomNumber, roomType]);
+
+  const handlePresetClick = (presetName: string) => {
+    if (roomType === 'breakout') {
+      setTopic(`${presetName} - Breakout Room ${roomNumber}`);
+    } else {
+      setTopic(presetName);
+    }
+  };
+
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    const template = templates.find((t) => t.id === templateId);
+    if (template) {
+      const newName = applyTemplate(template.template_pattern, roomNumber);
+      setTopic(newName);
+    }
+  };
+
+  const handleAutoFix = () => {
+    if (validation && !validation.isValid) {
+      const newName = generateMeetingName(topic, roomType, roomType === 'breakout' ? roomNumber : undefined);
+      setTopic(newName);
+    }
+  };
 
   const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -278,19 +343,118 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
             </div>
           )}
 
+          {!isEditMode && (
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-slate-900">Quick Presets</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAutoNaming(!autoNaming)}
+                  className={`text-xs px-2 py-1 rounded ${
+                    autoNaming ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  Auto-naming {autoNaming ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {quickPresets.slice(0, 6).map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => handlePresetClick(preset.name)}
+                    className="px-3 py-1.5 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-medium text-slate-700 transition-colors"
+                  >
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Meeting Topic
-              <span className="text-slate-400 font-normal ml-1">(optional)</span>
-            </label>
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g., Team Standup, Project Review"
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
-            />
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Meeting Topic
+                <span className="text-slate-400 font-normal ml-1">(optional)</span>
+              </label>
+              {validation && !validation.isValid && (
+                <button
+                  type="button"
+                  onClick={handleAutoFix}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  <Wand2 className="w-3 h-3" />
+                  Auto-fix
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="e.g., Team Standup, Project Review"
+                className={`w-full px-4 py-3 pr-10 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow ${
+                  validation?.isValid
+                    ? 'border-emerald-300 bg-emerald-50/30'
+                    : validation?.issues.length
+                    ? 'border-amber-300 bg-amber-50/30'
+                    : 'border-slate-200'
+                }`}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {validation?.isValid ? (
+                  <Check className="w-5 h-5 text-emerald-500" />
+                ) : validation?.issues.length ? (
+                  <AlertCircle className="w-5 h-5 text-amber-500" />
+                ) : null}
+              </div>
+            </div>
+            {validation && !validation.isValid && validation.issues.length > 0 && (
+              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-800 font-medium mb-1">Naming Issues:</p>
+                {validation.issues.map((issue, idx) => (
+                  <p key={idx} className="text-xs text-amber-700">• {issue}</p>
+                ))}
+                {validation.suggestions.length > 0 && (
+                  <p className="text-xs text-amber-600 mt-1 italic">{validation.suggestions[0]}</p>
+                )}
+              </div>
+            )}
+            {validation?.isValid && roomType === 'breakout' && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-emerald-700">
+                <Check className="w-3 h-3" />
+                <span>Zoom will detect: Breakout Room {validation.detectedRoomNumber}</span>
+              </div>
+            )}
           </div>
+
+          {!isEditMode && templates.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Use Template
+                <span className="text-slate-400 font-normal ml-1">(optional)</span>
+              </label>
+              <select
+                value={selectedTemplate}
+                onChange={(e) => handleTemplateChange(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+              >
+                <option value="">Select a template...</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name} {template.description ? `- ${template.description}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {!isEditMode && <NamingGuide roomType={roomType} />}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">

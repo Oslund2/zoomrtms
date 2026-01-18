@@ -336,7 +336,7 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[calc(100vh-200px)] overflow-y-auto">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
               <p className="text-sm text-red-700">{error}</p>

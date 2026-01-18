@@ -25,6 +25,7 @@ import {
 import { useDemoMode } from '../contexts/DemoModeContext';
 import { AmbientSelectionProvider, useAmbientSelection } from '../contexts/AmbientSelectionContext';
 import { TopicDetailPanel } from '../components/TopicDetailPanel';
+import { InsightDetailPanel } from '../components/InsightDetailPanel';
 import type { InsightEvent } from '../types/database';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -55,6 +56,7 @@ function AmbientDisplayContent() {
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [mobileTab, setMobileTab] = useState<'graph' | 'heatmap' | 'insights'>('insights');
+  const [selectedInsight, setSelectedInsight] = useState<InsightEvent | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -71,12 +73,16 @@ function AmbientDisplayContent() {
         }
       }
       if (e.key === 'Escape') {
-        clearAllFilters();
+        if (selectedInsight) {
+          setSelectedInsight(null);
+        } else {
+          clearAllFilters();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [clearAllFilters]);
+  }, [clearAllFilters, selectedInsight]);
 
   const hasActiveFilters = selectedTopic !== null || selectedRoom !== null;
 
@@ -168,7 +174,7 @@ function AmbientDisplayContent() {
           </div>
 
           <div className="col-span-3 min-h-0">
-            <InsightsFeed insights={insights} />
+            <InsightsFeed insights={insights} onInsightClick={setSelectedInsight} />
           </div>
         </div>
 
@@ -178,7 +184,7 @@ function AmbientDisplayContent() {
           </div>
 
           <div className="flex-1 min-h-0">
-            {mobileTab === 'insights' && <InsightsFeed insights={insights} />}
+            {mobileTab === 'insights' && <InsightsFeed insights={insights} onInsightClick={setSelectedInsight} />}
             {mobileTab === 'graph' && <KnowledgeGraphPanel nodes={nodes} edges={edges} />}
             {mobileTab === 'heatmap' && <HeatmapPanel data={heatmapData} categories={categories} />}
           </div>
@@ -199,6 +205,19 @@ function AmbientDisplayContent() {
             nodes={nodes}
             edges={edges}
             onClose={clearAllFilters}
+          />
+        </>
+      )}
+
+      {selectedInsight && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            onClick={() => setSelectedInsight(null)}
+          />
+          <InsightDetailPanel
+            insight={selectedInsight}
+            onClose={() => setSelectedInsight(null)}
           />
         </>
       )}
@@ -889,7 +908,7 @@ function RoomStatusPanel({ stats, summaries }: { stats: ReturnType<typeof useAmb
   );
 }
 
-function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
+function InsightsFeed({ insights, onInsightClick }: { insights: InsightEvent[]; onInsightClick: (insight: InsightEvent) => void }) {
   const { selectedTopic, selectedRoom } = useAmbientSelection();
   const [isPaused, setIsPaused] = useState(false);
   const pauseTimeoutRef = useRef<NodeJS.Timeout>();
@@ -951,9 +970,10 @@ function InsightsFeed({ insights }: { insights: InsightEvent[] }) {
     return (
       <div
         key={`${keyPrefix}${insight.id}`}
+        onClick={() => onInsightClick(insight)}
         className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border ${getInsightColors(insight.insight_type, insight.severity)} ${
           hasMatchingTopic ? 'ring-2 ring-blue-400/50' : ''
-        }`}
+        } cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg`}
       >
         <div className="flex items-start gap-2 sm:gap-3">
           <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${

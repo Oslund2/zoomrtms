@@ -21,11 +21,13 @@ import {
   useHeatmap,
   useAmbientStats,
   useRoomSummaries,
+  useAmbientTranscripts,
 } from '../hooks/useAmbientData';
 import { useDemoMode } from '../contexts/DemoModeContext';
 import { AmbientSelectionProvider, useAmbientSelection } from '../contexts/AmbientSelectionContext';
 import { TopicDetailPanel } from '../components/TopicDetailPanel';
 import { InsightDetailPanel } from '../components/InsightDetailPanel';
+import { TranscriptQuotesPanel } from '../components/TranscriptQuotesPanel';
 import type { InsightEvent } from '../types/database';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -52,6 +54,7 @@ function AmbientDisplayContent() {
   const { heatmapData, categories } = useHeatmap();
   const { stats } = useAmbientStats();
   const { summaries } = useRoomSummaries();
+  const { transcripts } = useAmbientTranscripts(50);
   const { selectedTopic, selectedRoom, clearAllFilters } = useAmbientSelection();
 
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -165,10 +168,13 @@ function AmbientDisplayContent() {
           </div>
 
           <div className="col-span-4 flex flex-col gap-6 min-h-0">
-            <div className="flex-1 min-h-0">
+            <div style={{ height: '35%' }} className="min-h-0">
               <HeatmapPanel data={heatmapData} categories={categories} />
             </div>
-            <div className="h-48">
+            <div style={{ height: '30%' }} className="min-h-0">
+              <TranscriptQuotesPanel transcripts={transcripts} />
+            </div>
+            <div className="flex-1 min-h-0">
               <RoomStatusPanel stats={stats} summaries={summaries} />
             </div>
           </div>

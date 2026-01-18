@@ -8,6 +8,7 @@ import type {
   TopicEdge,
   InsightEvent,
   AnalysisSummary,
+  Transcript,
 } from '../types/database';
 
 interface GraphNode {
@@ -590,4 +591,85 @@ export function useRoomSummaries() {
   }, [fetchSummaries, isDemoMode]);
 
   return { summaries, loading, refetch: fetchSummaries };
+}
+
+export function useAmbientTranscripts(limit = 100) {
+  const { isDemoMode, demoData } = useDemoMode();
+  const [transcripts, setTranscripts] = useState<Transcript[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTranscripts = useCallback(async () => {
+    if (isDemoMode) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const activeMeetings = demoData.meetings.filter(m => m.status === 'active');
+      const transcriptsWithRooms = demoData.transcripts.slice(0, limit).map((t, index) => {
+        const meeting = activeMeetings.find(m => m.id === t.meeting_id) || activeMeetings[index % activeMeetings.length];
+        return {
+          ...t,
+          room_number: meeting?.room_number,
+          room_type: meeting?.room_type,
+        };
+      });
+      setTranscripts(transcriptsWithRooms);
+      setLoading(false);
+      return;
+    }
+
+    const sinceTime = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    const { data: meetingsData } = await supabase
+      .from('meetings')
+      .select('id, room_number, room_type')
+      .eq('status', 'active');
+
+    if (!meetingsData || meetingsData.length === 0) {
+      setTranscripts([]);
+      setLoading(false);
+      return;
+    }
+
+    const meetingIds = meetingsData.map(m => m.id);
+
+    const { data } = await supabase
+      .from('transcripts')
+      .select('*')
+      .in('meeting_id', meetingIds)
+      .gte('created_at', sinceTime)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    const transcriptsWithRooms = (data || []).map(transcript => {
+      const meeting = meetingsData.find(m => m.id === transcript.meeting_id);
+      return {
+        ...transcript,
+        room_number: meeting?.room_number,
+        room_type: meeting?.room_type,
+      };
+    });
+
+    setTranscripts(transcriptsWithRooms as Transcript[]);
+    setLoading(false);
+  }, [limit, isDemoMode, demoData]);
+
+  useEffect(() => {
+    fetchTranscripts();
+
+    if (isDemoMode) {
+      return;
+    }
+
+    const channel = supabase
+      .channel('transcripts-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transcripts' }, fetchTranscripts)
+      .subscribe();
+
+    const interval = setInterval(fetchTranscripts, 15000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, [fetchTranscripts, isDemoMode]);
+
+  return { transcripts, loading, refetch: fetchTranscripts };
 }

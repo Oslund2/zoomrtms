@@ -132,7 +132,7 @@ function RoomCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <h3 className={`${isMain ? 'text-lg' : 'text-base'} font-bold text-slate-900 truncate`}>
-                {meeting.topic || 'Untitled Meeting'}
+                {meeting.topic?.split(' - ')[1] || meeting.topic || 'Untitled Meeting'}
               </h3>
               <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
                 <Radio className="w-3 h-3 mr-1 animate-pulse" />
@@ -240,11 +240,11 @@ function RoomSlot({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <h4 className="text-sm font-bold text-slate-900 truncate">
-                Breakout {roomNumber}
+                {room.topic?.split(' - ')[0] || `Breakout ${roomNumber}`}
               </h4>
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
             </div>
-            <p className="text-xs text-slate-500 truncate">{room.topic || 'Active'}</p>
+            <p className="text-xs text-slate-500 truncate">{room.topic?.split(' - ')[1] || room.topic || 'Active'}</p>
           </div>
         </div>
 

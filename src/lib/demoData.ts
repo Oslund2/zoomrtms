@@ -8,111 +8,198 @@ import type {
   AnalysisSummary,
 } from '../types/database';
 
-const SPEAKER_NAMES = [
-  'Sarah Chen', 'Michael Rodriguez', 'Emily Thompson', 'David Kim', 'Jessica Martinez',
-  'James Wilson', 'Lisa Anderson', 'Robert Lee', 'Amanda Brown', 'Christopher Taylor',
-  'Rachel Green', 'Daniel White', 'Sophia Johnson', 'Matthew Davis', 'Olivia Garcia',
-  'Andrew Miller', 'Victoria Jones', 'Ryan Moore', 'Lauren Martinez', 'Brandon Clark',
-  'Natalie Lewis', 'Kevin Walker', 'Michelle Hall', 'Steven Allen', 'Jennifer Young',
-  'Joshua King', 'Ashley Wright', 'Tyler Scott', 'Megan Adams', 'Jordan Baker',
+const NEWSROOM_ROLES = [
+  { name: 'Sarah Chen', role: 'Managing Editor' },
+  { name: 'Michael Rodriguez', role: 'Investigative Reporter' },
+  { name: 'Emily Thompson', role: 'City Editor' },
+  { name: 'David Kim', role: 'National Editor' },
+  { name: 'Jessica Martinez', role: 'Political Correspondent' },
+  { name: 'James Wilson', role: 'CFO' },
+  { name: 'Lisa Anderson', role: 'Digital Editor' },
+  { name: 'Robert Lee', role: 'General Assignment Reporter' },
+  { name: 'Amanda Brown', role: 'Communications Director' },
+  { name: 'Christopher Taylor', role: 'Revenue Director' },
+  { name: 'Rachel Green', role: 'Marketing Manager' },
+  { name: 'Daniel White', role: 'Legal Counsel' },
+  { name: 'Sophia Johnson', role: 'HR Director' },
+  { name: 'Matthew Davis', role: 'Editor-in-Chief' },
+  { name: 'Olivia Garcia', role: 'Publisher' },
+  { name: 'Andrew Miller', role: 'Operations Manager' },
+  { name: 'Victoria Jones', role: 'Investigative Lead' },
+  { name: 'Ryan Moore', role: 'Staff Reporter' },
+  { name: 'Lauren Martinez', role: 'Photo Editor' },
+  { name: 'Brandon Clark', role: 'Data Journalist' },
+  { name: 'Natalie Lewis', role: 'Copy Chief' },
+  { name: 'Kevin Walker', role: 'Audience Development Manager' },
+  { name: 'Michelle Hall', role: 'Social Media Editor' },
+  { name: 'Steven Allen', role: 'Video Producer' },
+  { name: 'Jennifer Young', role: 'Business Reporter' },
+  { name: 'Joshua King', role: 'Sports Editor' },
+  { name: 'Ashley Wright', role: 'Features Editor' },
+  { name: 'Tyler Scott', role: 'Assistant Editor' },
+  { name: 'Megan Adams', role: 'Breaking News Reporter' },
+  { name: 'Jordan Baker', role: 'Managing Director' },
 ];
 
+export const DEPARTMENT_CONFIG = [
+  { id: 0, name: 'All Participants', type: 'main' as const },
+  { id: 1, name: 'Local News', type: 'breakout' as const },
+  { id: 2, name: 'National News', type: 'breakout' as const },
+  { id: 3, name: 'Finance', type: 'breakout' as const },
+  { id: 4, name: 'Communications', type: 'breakout' as const },
+  { id: 5, name: 'Marketing', type: 'breakout' as const },
+  { id: 6, name: 'Legal', type: 'breakout' as const },
+  { id: 7, name: 'HR', type: 'breakout' as const },
+  { id: 8, name: 'Revenue', type: 'breakout' as const },
+];
+
+export function getDepartmentName(roomNumber: number): string {
+  const dept = DEPARTMENT_CONFIG.find(d => d.id === roomNumber);
+  return dept?.name || `Room ${roomNumber}`;
+}
+
 const MEETING_TOPICS = [
-  'Digital Transformation Strategy',
-  'Cloud Migration Planning',
-  'Customer Experience Workshop',
-  'Q1 Strategic Planning',
-  'Product Roadmap Review',
-  'Agile Transformation Discussion',
-  'Data Platform Architecture',
-  'API Strategy Session',
-  'Security Framework Planning',
-  'Organizational Change Management',
-  'Innovation Lab Kickoff',
-  'Cost Optimization Review',
-  'Market Research Findings',
-  'Technical Debt Assessment',
-  'Employee Engagement Initiative',
-  'Partner Integration Planning',
-  'Mobile Strategy Discussion',
-  'Analytics Dashboard Review',
-  'Process Automation Workshop',
-  'Customer Feedback Analysis',
+  'Breaking News Coverage Coordination',
+  'Election Coverage Strategy',
+  'Investigative Series Planning',
+  'Q1 Editorial Strategy',
+  'Digital Audience Growth Initiative',
+  'Newsroom Workflow Modernization',
+  'Multimedia Storytelling Workshop',
+  'Revenue Diversification Discussion',
+  'Source Protection Protocols',
+  'Cross-Department Alignment Meeting',
+  'Community Engagement Initiative',
+  'Budget Review & Planning',
+  'Subscriber Retention Analysis',
+  'Content Distribution Strategy',
+  'Staff Development Program',
+  'Partnership Opportunities Review',
+  'Mobile-First Publishing Discussion',
+  'Analytics & Metrics Review',
+  'Editorial Standards Workshop',
+  'Crisis Communication Planning',
 ];
 
 const TRANSCRIPT_TEMPLATES = {
-  Strategy: [
-    "I think we need to prioritize the digital transformation initiatives for Q2, especially around customer-facing applications.",
-    "Our strategy should focus on three pillars: technology modernization, process optimization, and talent development.",
-    "The competitive landscape is shifting rapidly. We need to be more agile in our decision-making.",
-    "Let's align on the strategic objectives before diving into tactical implementations.",
-    "I'm seeing strong alignment between what Finance is proposing and our overall business strategy.",
+  MainRoom: [
+    "We need to coordinate coverage across local and national desks for this developing story.",
+    "The editorial strategy should prioritize investigative depth while maintaining our breaking news capabilities.",
+    "Let's ensure all departments are aligned on our digital-first publishing approach for this series.",
+    "I'm seeing good momentum from the breakout discussions. We need to synthesize these insights.",
+    "Our newsroom transformation requires buy-in from every department. How are teams responding?",
+    "The revenue implications of this decision need to be balanced with our editorial mission.",
+    "We should reconvene after breakouts to finalize the cross-department action plan.",
   ],
-  Operations: [
-    "The current process has too many manual steps. We need to automate at least 60% of this workflow.",
-    "We're experiencing bottlenecks in the approval chain. Can we streamline this?",
-    "Our operational metrics show a 15% improvement since implementing the new system.",
-    "I'm concerned about the scalability of this approach as we grow.",
-    "We need better visibility into our operations pipeline. The current reporting is insufficient.",
+  LocalNews: [
+    "I've been cultivating sources in the municipal government for months on this development story.",
+    "Our community beat coverage needs more resources. We're missing important neighborhood stories.",
+    "The city council meeting tonight could break news on the housing development controversy.",
+    "We need to coordinate with the photographer for the community profile piece running Sunday.",
+    "Local business owners are concerned about the zoning changes. This could be a major story.",
+    "I think we should do a deeper dive into the school board's budget decisions.",
+    "The police scanner indicates a developing situation downtown. Should we deploy someone?",
   ],
-  Technology: [
-    "We should move to a microservices architecture to improve scalability and maintainability.",
-    "The cloud migration will reduce our infrastructure costs by approximately 30% annually.",
-    "I recommend we use containerization for better deployment consistency across environments.",
-    "Our technical debt is accumulating. We need to allocate time for refactoring.",
-    "The API gateway will handle authentication, rate limiting, and routing for all services.",
-  ],
-  People: [
-    "Change management is critical here. We need to bring the team along on this journey.",
-    "I'm hearing concerns from the team about the learning curve for this new platform.",
-    "We should invest in training programs to upskill our workforce for these new technologies.",
-    "The team is showing some resistance to change. We need better communication.",
-    "Employee morale is high right now, which is a good foundation for this transformation.",
+  NationalNews: [
+    "The Washington bureau is tracking three potential policy announcements this week.",
+    "We need to localize this national trend story for our readership. What's the regional angle?",
+    "Our political correspondent has an exclusive interview with the senator scheduled for tomorrow.",
+    "The wire services are reporting conflicting information. We should verify before publishing.",
+    "This federal policy change will have significant local impact. We should coordinate with Local News.",
+    "I'm tracking investigative leads on the congressional committee's recent hearings.",
+    "Our national desk needs to be ready to pivot quickly if this story breaks overnight.",
   ],
   Finance: [
-    "The ROI projection shows breakeven in 18 months, which aligns with our investment criteria.",
-    "We need to be mindful of budget constraints. Can we phase this implementation?",
-    "The cost-benefit analysis clearly favors the cloud-native approach.",
-    "I'm concerned about the upfront capital expenditure. Can we explore OpEx alternatives?",
-    "Let's ensure we have proper financial tracking for this initiative.",
+    "Q2 revenue projections are down 8% from our target. We need to adjust operating expenses.",
+    "The subscription growth is strong, but we're seeing churn in our mid-tier package.",
+    "Advertising revenue continues to decline. We need diversified revenue streams urgently.",
+    "Can we phase this technology investment over two fiscal quarters to manage cash flow?",
+    "The cost per subscriber acquisition has increased 15%. Marketing needs to optimize campaigns.",
+    "I'm concerned about the payroll implications if we expand investigative staff right now.",
+    "Let's review the budget allocation for each department before the board meeting.",
+  ],
+  Communications: [
+    "We need a prepared statement ready in case the investigative story generates backlash.",
+    "Our brand messaging should emphasize journalistic integrity and community accountability.",
+    "The social media response to yesterday's editorial was overwhelmingly positive.",
+    "I'm drafting talking points for the publisher's interview with the media trade publication.",
+    "We should proactively reach out to stakeholders before the investigative series publishes.",
+    "The crisis communication protocol needs to be updated based on lessons from last month.",
+    "Our external messaging must align with the newsroom's editorial independence principles.",
+  ],
+  Marketing: [
+    "Our subscriber growth rate increased 22% after implementing the new digital campaign.",
+    "The social media engagement metrics show readers want more behind-the-scenes content.",
+    "We should A/B test different newsletter formats to improve open rates.",
+    "The audience analytics indicate strong interest in local investigative journalism.",
+    "I propose we create a subscriber referral program to leverage our loyal reader base.",
+    "Our content promotion strategy needs to highlight exclusive investigative work more prominently.",
+    "The demographic data shows we're reaching younger audiences through mobile platforms.",
+  ],
+  Legal: [
+    "We need to review this investigative piece for potential defamation concerns before publication.",
+    "The source protection protocols must be followed rigorously on this sensitive story.",
+    "I recommend we consult with outside counsel on the FOIA request implications.",
+    "The reporter's documentation of sources meets our legal standards for this story.",
+    "We should add an additional fact-checking layer given the public figures involved.",
+    "The retraction and correction policy needs to be applied consistently across all platforms.",
+    "I'm reviewing the confidentiality agreements for the anonymous sources cited in this series.",
+  ],
+  HR: [
+    "We have three open positions in the newsroom. The hiring timeline needs to accelerate.",
+    "Staff feedback indicates burnout concerns. We should discuss workload distribution.",
+    "The training program for multimedia storytelling has been well-received by reporters.",
+    "We need to address the salary compression issue before we lose experienced journalists.",
+    "The diversity and inclusion initiatives are showing positive results in our recruitment.",
+    "I'm concerned about retention given the competitive hiring environment in journalism.",
+    "The performance review process should better recognize investigative work that takes months to develop.",
+  ],
+  Revenue: [
+    "The advertising sales team landed a significant sponsor for our investigative series.",
+    "We should explore branded content opportunities that don't compromise editorial integrity.",
+    "Subscription bundling with local partners could expand our revenue base.",
+    "The programmatic advertising rates are down. We need direct sales relationships.",
+    "I'm seeing interest from foundations for grant funding of our public service journalism.",
+    "The membership model is working well for other newsrooms. Should we consider it?",
+    "Event sponsorships could provide a steady supplementary revenue stream.",
   ],
 };
 
 const TOPIC_LABELS = {
-  Strategy: ['Digital Transformation', 'Market Positioning', 'Competitive Analysis', 'Business Model', 'Strategic Partnerships'],
-  Operations: ['Process Automation', 'Workflow Optimization', 'Supply Chain', 'Quality Assurance', 'Operational Excellence'],
-  Technology: ['Cloud Migration', 'Microservices', 'API Architecture', 'Data Platform', 'DevOps', 'Security Framework'],
-  People: ['Change Management', 'Training & Development', 'Team Culture', 'Leadership', 'Employee Engagement'],
-  Finance: ['Budget Planning', 'ROI Analysis', 'Cost Optimization', 'Financial Planning', 'Investment Strategy'],
+  Editorial: ['Breaking News Protocol', 'Story Selection', 'Source Development', 'Fact-Checking Standards', 'Editorial Independence', 'Investigative Methods'],
+  Content: ['Digital Publishing', 'Multimedia Content', 'Social Media Strategy', 'Audience Analytics', 'SEO Optimization', 'Content Distribution'],
+  Business: ['Subscription Revenue', 'Advertising Strategy', 'Budget Management', 'Cost Efficiency', 'Financial Sustainability', 'Grant Funding'],
+  Organization: ['Newsroom Culture', 'Staff Training', 'Leadership Development', 'Work-Life Balance', 'Diversity Initiatives', 'Talent Retention'],
+  Operations: ['Publishing Workflow', 'CMS Platform', 'Distribution Systems', 'Analytics Tools', 'Security Protocols', 'Technology Infrastructure'],
 };
 
 const INSIGHT_TEMPLATES = {
   alignment: [
-    { title: 'Strategic Alignment on Cloud Migration', description: 'Technology and Finance teams are aligned on cloud infrastructure approach and budget allocation.' },
-    { title: 'Cross-Team Consensus on Customer Focus', description: 'All breakout rooms emphasizing customer experience as top priority for Q2.' },
-    { title: 'Unified Approach to Agile Transformation', description: 'Operations and Technology teams converging on similar agile methodologies and practices.' },
-    { title: 'Budget Agreement Across Departments', description: 'Finance and Strategy teams reached consensus on investment prioritization.' },
-    { title: 'Shared Vision for Digital Platform', description: 'Product and Engineering teams aligned on technical architecture and roadmap.' },
+    { title: 'Editorial-Revenue Alignment on Investigative Series', description: 'Local News and National News teams aligned on investigative approach while Revenue secured sponsor funding.' },
+    { title: 'Cross-Department Consensus on Digital Strategy', description: 'Marketing, Communications, and both news desks emphasizing mobile-first publishing for Q2.' },
+    { title: 'Unified Newsroom Workflow Approach', description: 'Local News and National News converging on similar story development and fact-checking protocols.' },
+    { title: 'Budget Agreement Across Departments', description: 'Finance and HR reached consensus on staffing investment priorities.' },
+    { title: 'Shared Vision for Subscriber Growth', description: 'Marketing and Revenue teams aligned on membership model strategy and implementation timeline.' },
   ],
   misalignment: [
-    { title: 'Timeline Concerns in Operations', description: 'Operations team expressing concerns about aggressive timeline that Strategy team has not addressed.' },
-    { title: 'Budget Tension Between Teams', description: 'Finance proposing budget cuts while Technology team is requesting additional resources.' },
-    { title: 'Different Approaches to Implementation', description: 'Main room discussing phased rollout while breakout room 3 is planning big-bang deployment.' },
-    { title: 'Conflicting Priorities Detected', description: 'Room 2 prioritizing cost reduction while Room 4 is emphasizing feature expansion.' },
-    { title: 'Technical Approach Disagreement', description: 'Architecture team in Room 1 suggesting microservices while Room 5 favoring monolithic approach.' },
+    { title: 'Timeline Concerns in National News', description: 'National News expressing concerns about aggressive publication timeline that Communications has not addressed.' },
+    { title: 'Budget Tension Between Departments', description: 'Finance proposing staff reductions while HR discussing expansion of training programs.' },
+    { title: 'Different Approaches to Story Development', description: 'All Participants discussing phased investigative approach while Local News planning immediate publication.' },
+    { title: 'Conflicting Priorities Detected', description: 'Finance prioritizing cost reduction while National News emphasizing resource expansion for political coverage.' },
+    { title: 'Content Strategy Disagreement', description: 'Marketing suggesting clickable headlines while Local News maintaining editorial integrity standards.' },
   ],
   gap: [
-    { title: 'Customer Impact Not Discussed', description: 'No mention of customer impact analysis in any breakout rooms despite being stated objective.' },
-    { title: 'Security Considerations Missing', description: 'Security and compliance topics absent from technology discussions in active rooms.' },
-    { title: 'Change Management Not Addressed', description: 'Organizational change impacts not being discussed while planning major transformation.' },
-    { title: 'Risk Assessment Needed', description: 'Teams discussing implementation details but missing comprehensive risk analysis.' },
-    { title: 'Success Metrics Undefined', description: 'No clear KPIs or success criteria defined across any discussion rooms.' },
+    { title: 'Legal Review Not Discussed', description: 'No mention of legal review process in investigative series planning across All Participants room.' },
+    { title: 'Source Protection Missing from Discussion', description: 'Source protection and confidentiality protocols absent from National News investigative planning.' },
+    { title: 'Community Impact Not Addressed', description: 'Local News discussing breaking news coverage without considering community impact assessment.' },
+    { title: 'Crisis Communication Plan Needed', description: 'Teams planning controversial publication but Communications hasn\'t outlined response strategy.' },
+    { title: 'Success Metrics Undefined', description: 'No clear audience engagement KPIs or editorial impact criteria defined across any newsroom discussion.' },
   ],
   highlight: [
-    { title: 'Innovative Solution Proposed', description: 'Room 3 discussing creative approach to API integration that could reduce complexity by 40%.' },
-    { title: 'Strong Team Engagement', description: 'High participation and collaborative problem-solving observed across all active rooms.' },
-    { title: 'Data-Driven Decision Making', description: 'Teams consistently referencing analytics and metrics to support their recommendations.' },
-    { title: 'Quick Problem Resolution', description: 'Technical blockers identified and resolved efficiently through cross-team collaboration.' },
+    { title: 'Innovative Storytelling Approach Proposed', description: 'Local News discussing multimedia narrative technique that could increase engagement by 40%.' },
+    { title: 'Strong Cross-Department Collaboration', description: 'High participation and effective coordination observed between Local News, National News, and Marketing.' },
+    { title: 'Data-Driven Editorial Decisions', description: 'Teams consistently referencing audience analytics and engagement metrics to inform story selection.' },
+    { title: 'Quick Source Verification Success', description: 'National News identified and verified critical sources efficiently through investigative collaboration.' },
   ],
 };
 
@@ -129,15 +216,38 @@ class DemoDataGenerator {
   private personIdMap = new Map<string, number>();
   private topicNodes: TopicNode[] = [];
 
-  generateMeetings(activeCount: number = 2, historicalCount: number = 18): Meeting[] {
+  generateMeetings(activeCount: number = 9, historicalCount: number = 18): Meeting[] {
     const meetings: Meeting[] = [];
     const now = new Date();
+    const mainMeetingStartTime = new Date(now.getTime() - Math.random() * 1800000);
 
-    // Generate active meetings
-    for (let i = 0; i < activeCount; i++) {
-      const roomType = i === 0 ? 'main' : 'breakout';
-      const roomNumber = i === 0 ? 0 : i;
-      const startedAt = new Date(now.getTime() - Math.random() * 3600000).toISOString();
+    // Generate active meetings - always create all 9 rooms (main + 8 breakouts)
+    for (let i = 0; i < 9; i++) {
+      const dept = DEPARTMENT_CONFIG[i];
+      const startedAt = new Date(mainMeetingStartTime.getTime() + (i * 1000)).toISOString();
+
+      // Select appropriate topic based on department
+      let topic = MEETING_TOPICS[0];
+      if (i === 0) topic = 'Cross-Department Alignment Meeting';
+      else if (i === 1 || i === 2) topic = 'Election Coverage Strategy';
+      else if (i === 3) topic = 'Budget Review & Planning';
+      else if (i === 4) topic = 'Crisis Communication Planning';
+      else if (i === 5) topic = 'Digital Audience Growth Initiative';
+      else if (i === 6) topic = 'Source Protection Protocols';
+      else if (i === 7) topic = 'Staff Development Program';
+      else if (i === 8) topic = 'Revenue Diversification Discussion';
+
+      // Select appropriate host based on department
+      let hostName = this.getRandomName();
+      if (i === 0) hostName = 'Matthew Davis'; // Editor-in-Chief hosts main room
+      else if (i === 1) hostName = 'Emily Thompson'; // City Editor
+      else if (i === 2) hostName = 'David Kim'; // National Editor
+      else if (i === 3) hostName = 'James Wilson'; // CFO
+      else if (i === 4) hostName = 'Amanda Brown'; // Communications Director
+      else if (i === 5) hostName = 'Rachel Green'; // Marketing Manager
+      else if (i === 6) hostName = 'Daniel White'; // Legal Counsel
+      else if (i === 7) hostName = 'Sophia Johnson'; // HR Director
+      else if (i === 8) hostName = 'Christopher Taylor'; // Revenue Director
 
       meetings.push({
         id: `demo-meeting-${this.meetingIdCounter++}`,
@@ -145,12 +255,12 @@ class DemoDataGenerator {
         rtms_stream_id: `rtms-${Math.random().toString(36).substr(2, 9)}`,
         server_urls: 'wss://demo.rtms.zoom.us',
         host_id: `host-${i}`,
-        host_name: this.getRandomName(),
-        topic: MEETING_TOPICS[i % MEETING_TOPICS.length],
+        host_name: hostName,
+        topic: `${dept.name} - ${topic}`,
         status: 'active',
-        room_type: roomType,
-        room_number: roomNumber,
-        parent_meeting_id: roomType === 'breakout' ? 'demo-meeting-1' : null,
+        room_type: dept.type,
+        room_number: dept.id,
+        parent_meeting_id: dept.type === 'breakout' ? 'demo-meeting-1' : null,
         started_at: startedAt,
         ended_at: null,
         created_at: startedAt,
@@ -158,25 +268,30 @@ class DemoDataGenerator {
       });
     }
 
-    // Generate historical meetings
+    // Generate historical meetings with various department combinations
     for (let i = 0; i < historicalCount; i++) {
       const daysAgo = Math.floor(Math.random() * 14) + 1;
       const startedAt = new Date(now.getTime() - daysAgo * 86400000 - Math.random() * 36000000);
       const duration = (30 + Math.random() * 90) * 60000; // 30-120 minutes
       const endedAt = new Date(startedAt.getTime() + duration);
 
+      // Randomly select department for historical meetings
+      const deptIndex = Math.floor(Math.random() * 9);
+      const dept = DEPARTMENT_CONFIG[deptIndex];
+      const historicalTopic = MEETING_TOPICS[(i + 2) % MEETING_TOPICS.length];
+
       meetings.push({
         id: `demo-meeting-${this.meetingIdCounter++}`,
         meeting_uuid: `demo-uuid-${Math.random().toString(36).substr(2, 9)}`,
         rtms_stream_id: `rtms-${Math.random().toString(36).substr(2, 9)}`,
         server_urls: 'wss://demo.rtms.zoom.us',
-        host_id: `host-${i}`,
+        host_id: `host-hist-${i}`,
         host_name: this.getRandomName(),
-        topic: MEETING_TOPICS[(i + 2) % MEETING_TOPICS.length],
+        topic: `${dept.name} - ${historicalTopic}`,
         status: 'ended',
-        room_type: 'main',
-        room_number: 0,
-        parent_meeting_id: null,
+        room_type: dept.type,
+        room_number: dept.id,
+        parent_meeting_id: dept.type === 'breakout' ? 'demo-meeting-1' : null,
         started_at: startedAt.toISOString(),
         ended_at: endedAt.toISOString(),
         created_at: startedAt.toISOString(),
@@ -218,11 +333,24 @@ class DemoDataGenerator {
   generateTranscripts(meetingId: string, count: number = 50): Transcript[] {
     const transcripts: Transcript[] = [];
     const now = new Date();
-    const categories = Object.keys(TRANSCRIPT_TEMPLATES);
+
+    // Determine which template category to use based on meeting ID
+    const meetingIndex = parseInt(meetingId.split('-')[2]) - 1;
+    let categoryKey: keyof typeof TRANSCRIPT_TEMPLATES = 'MainRoom';
+
+    if (meetingIndex === 0) categoryKey = 'MainRoom';
+    else if (meetingIndex === 1) categoryKey = 'LocalNews';
+    else if (meetingIndex === 2) categoryKey = 'NationalNews';
+    else if (meetingIndex === 3) categoryKey = 'Finance';
+    else if (meetingIndex === 4) categoryKey = 'Communications';
+    else if (meetingIndex === 5) categoryKey = 'Marketing';
+    else if (meetingIndex === 6) categoryKey = 'Legal';
+    else if (meetingIndex === 7) categoryKey = 'HR';
+    else if (meetingIndex === 8) categoryKey = 'Revenue';
+
+    const templates = TRANSCRIPT_TEMPLATES[categoryKey];
 
     for (let i = 0; i < count; i++) {
-      const category = categories[Math.floor(Math.random() * categories.length)];
-      const templates = TRANSCRIPT_TEMPLATES[category as keyof typeof TRANSCRIPT_TEMPLATES];
       const content = templates[Math.floor(Math.random() * templates.length)];
       const createdAt = new Date(now.getTime() - (count - i) * 12000);
 
@@ -247,11 +375,24 @@ class DemoDataGenerator {
   generateLiveTranscripts(meetingId: string, count: number = 3): Transcript[] {
     const transcripts: Transcript[] = [];
     const now = new Date();
-    const categories = Object.keys(TRANSCRIPT_TEMPLATES);
+
+    // Determine which template category to use based on meeting ID
+    const meetingIndex = parseInt(meetingId.split('-')[2]) - 1;
+    let categoryKey: keyof typeof TRANSCRIPT_TEMPLATES = 'MainRoom';
+
+    if (meetingIndex === 0) categoryKey = 'MainRoom';
+    else if (meetingIndex === 1) categoryKey = 'LocalNews';
+    else if (meetingIndex === 2) categoryKey = 'NationalNews';
+    else if (meetingIndex === 3) categoryKey = 'Finance';
+    else if (meetingIndex === 4) categoryKey = 'Communications';
+    else if (meetingIndex === 5) categoryKey = 'Marketing';
+    else if (meetingIndex === 6) categoryKey = 'Legal';
+    else if (meetingIndex === 7) categoryKey = 'HR';
+    else if (meetingIndex === 8) categoryKey = 'Revenue';
+
+    const templates = TRANSCRIPT_TEMPLATES[categoryKey];
 
     for (let i = 0; i < count; i++) {
-      const category = categories[Math.floor(Math.random() * categories.length)];
-      const templates = TRANSCRIPT_TEMPLATES[category as keyof typeof TRANSCRIPT_TEMPLATES];
       const content = templates[Math.floor(Math.random() * templates.length)];
       const createdAt = new Date(now.getTime() - i * 2000);
 
@@ -271,13 +412,13 @@ class DemoDataGenerator {
     return transcripts;
   }
 
-  generateTopicNodes(count: number = 28): TopicNode[] {
+  generateTopicNodes(count: number = 31): TopicNode[] {
     const nodes: TopicNode[] = [];
     const now = new Date();
     const categories = Object.keys(TOPIC_LABELS);
 
-    const hotTopics = ['Cloud Migration', 'Digital Transformation', 'ROI Analysis'];
-    const mediumTopics = ['Change Management', 'API Architecture', 'Process Automation', 'Budget Planning', 'Team Culture'];
+    const hotTopics = ['Breaking News Protocol', 'Digital Publishing', 'Subscription Revenue'];
+    const mediumTopics = ['Source Development', 'Multimedia Content', 'Budget Management', 'Newsroom Culture', 'Content Distribution'];
 
     categories.forEach(category => {
       const labels = TOPIC_LABELS[category as keyof typeof TOPIC_LABELS];
@@ -438,15 +579,25 @@ class DemoDataGenerator {
     const now = new Date();
 
     for (let room = 0; room <= 8; room++) {
+      const dept = DEPARTMENT_CONFIG[room];
       const keyTopics = this.getRandomTopicLabels(3, 5);
       const keySpeakers = Array.from({ length: 3 }, () => this.getRandomName());
+
+      let focusArea = 'implementation strategies';
+      if (room === 1 || room === 2) focusArea = 'editorial approach and source verification';
+      else if (room === 3) focusArea = 'budget allocation and financial planning';
+      else if (room === 4) focusArea = 'messaging strategy and stakeholder communication';
+      else if (room === 5) focusArea = 'audience growth and engagement tactics';
+      else if (room === 6) focusArea = 'legal compliance and risk mitigation';
+      else if (room === 7) focusArea = 'staff development and organizational culture';
+      else if (room === 8) focusArea = 'revenue opportunities and monetization strategies';
 
       summaries.push({
         id: `demo-summary-${this.summaryIdCounter++}`,
         meeting_id: 'demo-meeting-1',
         room_number: room,
         summary_type: 'room',
-        content: `Room ${room === 0 ? 'Main' : room} is discussing ${keyTopics.join(', ').toLowerCase()} with focus on implementation strategies.`,
+        content: `${dept.name} is discussing ${keyTopics.join(', ').toLowerCase()} with focus on ${focusArea}.`,
         sentiment_score: Math.random() * 0.5 + 0.3,
         key_topics: keyTopics,
         key_speakers: keySpeakers,
@@ -460,9 +611,8 @@ class DemoDataGenerator {
   }
 
   private getRandomName(): string {
-    // Generate a unique person identifier
-    const personId = this.personIdCounter++;
-    return `Person ${personId}`;
+    const person = NEWSROOM_ROLES[Math.floor(Math.random() * NEWSROOM_ROLES.length)];
+    return person.name;
   }
 
   private getRandomTopicLabels(min: number, max: number): string[] {

@@ -8,11 +8,14 @@ interface SelectedTopic {
   roomMentions: Record<string, number>;
 }
 
+type StatFilter = 'rooms' | 'topics' | 'aligned' | 'issues' | null;
+
 interface AmbientSelectionState {
   selectedTopic: SelectedTopic | null;
   selectedRoom: number | null;
   selectedCategory: string | null;
   selectedTranscript: Transcript | null;
+  statFilter: StatFilter;
 }
 
 interface AmbientSelectionContextType extends AmbientSelectionState {
@@ -20,6 +23,7 @@ interface AmbientSelectionContextType extends AmbientSelectionState {
   setSelectedRoom: (room: number | null) => void;
   setSelectedCategory: (category: string | null) => void;
   setSelectedTranscript: (transcript: Transcript | null) => void;
+  setStatFilter: (filter: StatFilter) => void;
   clearAllFilters: () => void;
 }
 
@@ -30,12 +34,14 @@ export function AmbientSelectionProvider({ children }: { children: ReactNode }) 
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTranscript, setSelectedTranscript] = useState<Transcript | null>(null);
+  const [statFilter, setStatFilter] = useState<StatFilter>(null);
 
   const clearAllFilters = () => {
     setSelectedTopic(null);
     setSelectedRoom(null);
     setSelectedCategory(null);
     setSelectedTranscript(null);
+    setStatFilter(null);
   };
 
   return (
@@ -45,10 +51,12 @@ export function AmbientSelectionProvider({ children }: { children: ReactNode }) 
         selectedRoom,
         selectedCategory,
         selectedTranscript,
+        statFilter,
         setSelectedTopic,
         setSelectedRoom,
         setSelectedCategory,
         setSelectedTranscript,
+        setStatFilter,
         clearAllFilters,
       }}
     >

@@ -32,11 +32,14 @@ import { TranscriptDetailPanel } from '../components/TranscriptDetailPanel';
 import type { InsightEvent } from '../types/database';
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Strategy: '#3b82f6',
-  Operations: '#10b981',
-  Technology: '#8b5cf6',
-  People: '#f59e0b',
+  News: '#3b82f6',
   Finance: '#ef4444',
+  HR: '#f59e0b',
+  Communications: '#06b6d4',
+  AI: '#8b5cf6',
+  Marketing: '#ec4899',
+  Operations: '#10b981',
+  Technology: '#6366f1',
   General: '#6b7280',
 };
 
@@ -56,7 +59,7 @@ function AmbientDisplayContent() {
   const { stats } = useAmbientStats();
   const { summaries } = useRoomSummaries();
   const { transcripts } = useAmbientTranscripts(50);
-  const { selectedTopic, selectedRoom, selectedTranscript, setSelectedTranscript, clearAllFilters } = useAmbientSelection();
+  const { selectedTopic, selectedRoom, selectedTranscript, statFilter, setSelectedTranscript, clearAllFilters } = useAmbientSelection();
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [mobileTab, setMobileTab] = useState<'graph' | 'heatmap' | 'insights'>('insights');
@@ -235,12 +238,30 @@ function AmbientDisplayContent() {
           onClose={() => setSelectedTranscript(null)}
         />
       )}
+
+      {statFilter && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            onClick={clearAllFilters}
+          />
+          <StatDetailPanel
+            filterType={statFilter}
+            nodes={nodes}
+            insights={insights}
+            summaries={summaries}
+            stats={stats}
+            onClose={clearAllFilters}
+          />
+        </>
+      )}
     </div>
   );
 }
 
 function Header({ stats, currentTime, isDemoMode }: { stats: ReturnType<typeof useAmbientStats>['stats']; currentTime: Date; isDemoMode: boolean }) {
   const navigate = useNavigate();
+  const { statFilter, setStatFilter } = useAmbientSelection();
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -279,24 +300,32 @@ function Header({ stats, currentTime, isDemoMode }: { stats: ReturnType<typeof u
             value={stats.activeRooms}
             color="emerald"
             pulse
+            onClick={() => setStatFilter(statFilter === 'rooms' ? null : 'rooms')}
+            isActive={statFilter === 'rooms'}
           />
           <MiniStatPill
             icon={Brain}
             label="Topics"
             value={stats.totalTopics}
             color="blue"
+            onClick={() => setStatFilter(statFilter === 'topics' ? null : 'topics')}
+            isActive={statFilter === 'topics'}
           />
           <MiniStatPill
             icon={CheckCircle}
             label="Aligned"
             value={stats.alignments}
             color="cyan"
+            onClick={() => setStatFilter(statFilter === 'aligned' ? null : 'aligned')}
+            isActive={statFilter === 'aligned'}
           />
           <MiniStatPill
             icon={AlertTriangle}
             label="Issues"
             value={stats.misalignments}
             color="amber"
+            onClick={() => setStatFilter(statFilter === 'issues' ? null : 'issues')}
+            isActive={statFilter === 'issues'}
           />
         </div>
 
@@ -319,12 +348,16 @@ function MiniStatPill({
   value,
   color,
   pulse,
+  onClick,
+  isActive,
 }: {
   icon: React.ElementType;
   label: string;
   value: number;
   color: 'emerald' | 'blue' | 'cyan' | 'amber';
   pulse?: boolean;
+  onClick?: () => void;
+  isActive?: boolean;
 }) {
   const colorClasses = {
     emerald: 'text-emerald-400',
@@ -333,14 +366,29 @@ function MiniStatPill({
     amber: 'text-amber-400',
   };
 
+  const activeClasses = {
+    emerald: 'bg-emerald-500/20 border-emerald-400/50',
+    blue: 'bg-blue-500/20 border-blue-400/50',
+    cyan: 'bg-cyan-500/20 border-cyan-400/50',
+    amber: 'bg-amber-500/20 border-amber-400/50',
+  };
+
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 sm:gap-2 flex-shrink-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all ${
+        isActive
+          ? `${activeClasses[color]} border-2`
+          : 'hover:bg-slate-800/50 border-2 border-transparent'
+      } ${onClick ? 'cursor-pointer' : ''}`}
+      title={`Click to ${isActive ? 'clear' : 'view'} ${label.toLowerCase()}`}
+    >
       <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${colorClasses[color]} ${pulse ? 'animate-pulse' : ''}`} />
       <div className="flex items-baseline gap-1 sm:flex-col sm:gap-0">
         <span className="text-sm sm:text-lg font-bold text-white">{value}</span>
         <span className="text-[10px] sm:text-xs text-slate-400 uppercase hidden sm:block">{label}</span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -1129,13 +1177,225 @@ function Footer({ stats }: { stats: ReturnType<typeof useAmbientStats>['stats'] 
         <span>Click topics to filter</span>
         <span>Press F for fullscreen</span>
       </div>
-      <div className="flex items-center gap-4">
-        {Object.entries(CATEGORY_COLORS).slice(0, 5).map(([name, color]) => (
+      <div className="flex items-center gap-4 flex-wrap">
+        {Object.entries(CATEGORY_COLORS).filter(([name]) => name !== 'General').map(([name, color]) => (
           <div key={name} className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
             <span className="text-xs">{name}</span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function StatDetailPanel({
+  filterType,
+  nodes,
+  insights,
+  summaries,
+  stats,
+  onClose,
+}: {
+  filterType: 'rooms' | 'topics' | 'aligned' | 'issues';
+  nodes: any[];
+  insights: InsightEvent[];
+  summaries: any[];
+  stats: ReturnType<typeof useAmbientStats>['stats'];
+  onClose: () => void;
+}) {
+  const { setSelectedTopic, setSelectedRoom } = useAmbientSelection();
+  const { isDemoMode, demoData } = useDemoMode();
+
+  let title = '';
+  let icon: React.ElementType = Activity;
+  let color = 'blue';
+
+  switch (filterType) {
+    case 'rooms':
+      title = 'Active Rooms';
+      icon = Activity;
+      color = 'emerald';
+      break;
+    case 'topics':
+      title = 'All Topics';
+      icon = Brain;
+      color = 'blue';
+      break;
+    case 'aligned':
+      title = 'Alignment Insights';
+      icon = CheckCircle;
+      color = 'cyan';
+      break;
+    case 'issues':
+      title = 'Issues & Misalignments';
+      icon = AlertTriangle;
+      color = 'amber';
+      break;
+  }
+
+  const Icon = icon;
+
+  const filteredInsights =
+    filterType === 'aligned'
+      ? insights.filter((i) => i.insight_type === 'alignment')
+      : filterType === 'issues'
+      ? insights.filter((i) => i.insight_type === 'misalignment' || i.insight_type === 'gap')
+      : insights;
+
+  const activeMeetings = isDemoMode
+    ? demoData.meetings.filter((m) => m.status === 'active')
+    : [];
+
+  return (
+    <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[500px] lg:w-[600px] bg-slate-900/95 backdrop-blur-xl border-l border-slate-700 shadow-2xl z-50 flex flex-col">
+      <div className="p-4 sm:p-6 border-b border-slate-700 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-${color}-500/20 rounded-xl flex items-center justify-center`}>
+            <Icon className={`w-5 h-5 sm:w-6 sm:h-6 text-${color}-400`} />
+          </div>
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-white">{title}</h2>
+            <p className="text-xs sm:text-sm text-slate-400">
+              {filterType === 'rooms' && `${stats.activeRooms} active`}
+              {filterType === 'topics' && `${nodes.length} topics`}
+              {filterType === 'aligned' && `${stats.alignments} alignments`}
+              {filterType === 'issues' && `${stats.misalignments} issues`}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 rounded-lg flex items-center justify-center transition-colors"
+        >
+          <X className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4">
+        {filterType === 'rooms' && (
+          <>
+            {activeMeetings.map((meeting) => (
+              <button
+                key={meeting.id}
+                onClick={() => {
+                  setSelectedRoom(meeting.room_number as number);
+                  onClose();
+                }}
+                className="w-full bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600/50 hover:border-emerald-400/50 rounded-xl p-4 transition-all text-left group"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-400 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <Users className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-white mb-1 truncate">
+                      {meeting.room_type === 'main' ? 'Main Room' : meeting.topic?.split(' - ')[0] || `Room ${meeting.room_number}`}
+                    </h3>
+                    <p className="text-sm text-slate-400 truncate">
+                      {meeting.topic?.split(' - ')[1] || meeting.topic}
+                    </p>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                      <span>Host: {meeting.host_name}</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Active
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </>
+        )}
+
+        {filterType === 'topics' && (
+          <>
+            {nodes.map((node) => (
+              <button
+                key={node.id}
+                onClick={() => {
+                  setSelectedTopic(node);
+                  onClose();
+                }}
+                className="w-full bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600/50 hover:border-blue-400/50 rounded-xl p-4 transition-all text-left group"
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
+                    style={{ backgroundColor: `${CATEGORY_COLORS[node.category || 'General']}40` }}
+                  >
+                    <Brain className="w-5 h-5" style={{ color: CATEGORY_COLORS[node.category || 'General'] }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-white truncate">{node.label}</h3>
+                      {node.category && (
+                        <span
+                          className="px-2 py-0.5 rounded text-xs font-medium"
+                          style={{
+                            backgroundColor: `${CATEGORY_COLORS[node.category]}20`,
+                            color: CATEGORY_COLORS[node.category],
+                          }}
+                        >
+                          {node.category}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-slate-400">
+                      <span>{Object.keys(node.roomMentions).length} rooms</span>
+                      <span>{Math.round(node.importance * 100)}% importance</span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </>
+        )}
+
+        {(filterType === 'aligned' || filterType === 'issues') && (
+          <>
+            {filteredInsights.map((insight) => {
+              const severityColors = {
+                info: 'blue',
+                warning: 'amber',
+                alert: 'red',
+              };
+              const severityColor = severityColors[insight.severity];
+
+              return (
+                <div
+                  key={insight.id}
+                  className={`bg-slate-800/50 border border-${severityColor}-500/30 rounded-xl p-4 transition-all`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 bg-${severityColor}-500/20 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      {insight.insight_type === 'alignment' ? (
+                        <CheckCircle className={`w-5 h-5 text-${severityColor}-400`} />
+                      ) : (
+                        <AlertTriangle className={`w-5 h-5 text-${severityColor}-400`} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-white mb-1">{insight.title}</h3>
+                      <p className="text-sm text-slate-400 mb-2">{insight.description}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {insight.involved_rooms.map((room) => (
+                          <span
+                            key={room}
+                            className="px-2 py-0.5 bg-slate-700/50 rounded text-xs text-slate-300"
+                          >
+                            {room === 0 ? 'Main' : `R${room}`}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
     </div>
   );

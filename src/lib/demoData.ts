@@ -166,11 +166,14 @@ const TRANSCRIPT_TEMPLATES = {
 };
 
 const TOPIC_LABELS = {
-  Editorial: ['Breaking News Protocol', 'Story Selection', 'Source Development', 'Fact-Checking Standards', 'Editorial Independence', 'Investigative Methods'],
-  Content: ['Digital Publishing', 'Multimedia Content', 'Social Media Strategy', 'Audience Analytics', 'SEO Optimization', 'Content Distribution'],
-  Business: ['Subscription Revenue', 'Advertising Strategy', 'Budget Management', 'Cost Efficiency', 'Financial Sustainability', 'Grant Funding'],
-  Organization: ['Newsroom Culture', 'Staff Training', 'Leadership Development', 'Work-Life Balance', 'Diversity Initiatives', 'Talent Retention'],
-  Operations: ['Publishing Workflow', 'CMS Platform', 'Distribution Systems', 'Analytics Tools', 'Security Protocols', 'Technology Infrastructure'],
+  News: ['Breaking News Protocol', 'Story Selection', 'Source Development', 'Fact-Checking Standards', 'Editorial Independence', 'Investigative Methods'],
+  Finance: ['Budget Management', 'Revenue Forecasting', 'Cost Optimization', 'Investment Strategy', 'Financial Planning', 'Expense Allocation'],
+  HR: ['Talent Acquisition', 'Employee Development', 'Performance Management', 'Compensation Strategy', 'Workplace Culture', 'Retention Programs'],
+  Communications: ['Brand Messaging', 'Crisis Management', 'Stakeholder Relations', 'Media Strategy', 'Internal Communications', 'Public Relations'],
+  AI: ['Machine Learning Models', 'Natural Language Processing', 'Predictive Analytics', 'Automation Strategy', 'AI Ethics', 'Data Pipeline'],
+  Marketing: ['Digital Campaigns', 'Audience Segmentation', 'Content Strategy', 'Social Media Engagement', 'SEO Strategy', 'Brand Development'],
+  Operations: ['Process Optimization', 'Workflow Automation', 'System Integration', 'Quality Assurance', 'Operational Efficiency', 'Infrastructure'],
+  Technology: ['Platform Architecture', 'Cloud Infrastructure', 'Security Protocols', 'API Development', 'DevOps Practices', 'Technical Debt'],
 };
 
 const INSIGHT_TEMPLATES = {
@@ -412,13 +415,13 @@ class DemoDataGenerator {
     return transcripts;
   }
 
-  generateTopicNodes(count: number = 31): TopicNode[] {
+  generateTopicNodes(count: number = 48): TopicNode[] {
     const nodes: TopicNode[] = [];
     const now = new Date();
     const categories = Object.keys(TOPIC_LABELS);
 
-    const hotTopics = ['Breaking News Protocol', 'Digital Publishing', 'Subscription Revenue'];
-    const mediumTopics = ['Source Development', 'Multimedia Content', 'Budget Management', 'Newsroom Culture', 'Content Distribution'];
+    const hotTopics = ['Machine Learning Models', 'Budget Management', 'Crisis Management', 'Breaking News Protocol'];
+    const mediumTopics = ['Talent Acquisition', 'Content Strategy', 'Process Optimization', 'Cloud Infrastructure', 'Revenue Forecasting', 'Brand Messaging'];
 
     categories.forEach(category => {
       const labels = TOPIC_LABELS[category as keyof typeof TOPIC_LABELS];

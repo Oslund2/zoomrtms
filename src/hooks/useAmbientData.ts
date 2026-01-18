@@ -355,7 +355,7 @@ export function useHeatmap() {
       const topics = demoData.topicNodes;
 
       const uniqueCategories = [...new Set(topics.map((t) => t.category).filter(Boolean))];
-      const cats = uniqueCategories.length > 0 ? uniqueCategories : ['Strategy', 'Operations', 'Technology', 'People', 'Finance'];
+      const cats = uniqueCategories.length > 0 ? uniqueCategories : ['News', 'Finance', 'HR', 'Communications', 'AI', 'Marketing', 'Operations', 'Technology'];
       setCategories(cats as string[]);
 
       const rooms = [0, 1, 2, 3, 4, 5, 6, 7, 8];
@@ -398,7 +398,7 @@ export function useHeatmap() {
       .limit(30);
 
     const uniqueCategories = [...new Set(topics?.map((t) => t.category).filter(Boolean) || [])];
-    const cats = uniqueCategories.length > 0 ? uniqueCategories : ['Strategy', 'Operations', 'Technology', 'People', 'Finance'];
+    const cats = uniqueCategories.length > 0 ? uniqueCategories : ['News', 'Finance', 'HR', 'Communications', 'AI', 'Marketing', 'Operations', 'Technology'];
     setCategories(cats as string[]);
 
     const rooms = [0, 1, 2, 3, 4, 5, 6, 7, 8];

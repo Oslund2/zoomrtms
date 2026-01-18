@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
+import type { Transcript } from '../types/database';
 
 interface SelectedTopic {
   id: string;
@@ -11,12 +12,14 @@ interface AmbientSelectionState {
   selectedTopic: SelectedTopic | null;
   selectedRoom: number | null;
   selectedCategory: string | null;
+  selectedTranscript: Transcript | null;
 }
 
 interface AmbientSelectionContextType extends AmbientSelectionState {
   setSelectedTopic: (topic: SelectedTopic | null) => void;
   setSelectedRoom: (room: number | null) => void;
   setSelectedCategory: (category: string | null) => void;
+  setSelectedTranscript: (transcript: Transcript | null) => void;
   clearAllFilters: () => void;
 }
 
@@ -26,11 +29,13 @@ export function AmbientSelectionProvider({ children }: { children: ReactNode }) 
   const [selectedTopic, setSelectedTopic] = useState<SelectedTopic | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedTranscript, setSelectedTranscript] = useState<Transcript | null>(null);
 
   const clearAllFilters = () => {
     setSelectedTopic(null);
     setSelectedRoom(null);
     setSelectedCategory(null);
+    setSelectedTranscript(null);
   };
 
   return (
@@ -39,9 +44,11 @@ export function AmbientSelectionProvider({ children }: { children: ReactNode }) 
         selectedTopic,
         selectedRoom,
         selectedCategory,
+        selectedTranscript,
         setSelectedTopic,
         setSelectedRoom,
         setSelectedCategory,
+        setSelectedTranscript,
         clearAllFilters,
       }}
     >

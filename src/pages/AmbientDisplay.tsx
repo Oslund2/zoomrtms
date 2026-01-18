@@ -28,6 +28,7 @@ import { AmbientSelectionProvider, useAmbientSelection } from '../contexts/Ambie
 import { TopicDetailPanel } from '../components/TopicDetailPanel';
 import { InsightDetailPanel } from '../components/InsightDetailPanel';
 import { TranscriptQuotesPanel } from '../components/TranscriptQuotesPanel';
+import { TranscriptDetailPanel } from '../components/TranscriptDetailPanel';
 import type { InsightEvent } from '../types/database';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -55,7 +56,7 @@ function AmbientDisplayContent() {
   const { stats } = useAmbientStats();
   const { summaries } = useRoomSummaries();
   const { transcripts } = useAmbientTranscripts(50);
-  const { selectedTopic, selectedRoom, clearAllFilters } = useAmbientSelection();
+  const { selectedTopic, selectedRoom, selectedTranscript, setSelectedTranscript, clearAllFilters } = useAmbientSelection();
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [mobileTab, setMobileTab] = useState<'graph' | 'heatmap' | 'insights'>('insights');
@@ -226,6 +227,13 @@ function AmbientDisplayContent() {
             onClose={() => setSelectedInsight(null)}
           />
         </>
+      )}
+
+      {selectedTranscript && (
+        <TranscriptDetailPanel
+          transcript={selectedTranscript}
+          onClose={() => setSelectedTranscript(null)}
+        />
       )}
     </div>
   );

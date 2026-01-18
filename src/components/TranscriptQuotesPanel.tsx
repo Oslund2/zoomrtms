@@ -54,7 +54,7 @@ function isRelevantToTopic(content: string, topicLabel: string): boolean {
 }
 
 export function TranscriptQuotesPanel({ transcripts }: TranscriptQuotesPanelProps) {
-  const { selectedTopic, selectedRoom, setSelectedRoom } = useAmbientSelection();
+  const { selectedTopic, selectedRoom, setSelectedTranscript } = useAmbientSelection();
   const [isPaused, setIsPaused] = useState(false);
   const pauseTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -97,11 +97,7 @@ export function TranscriptQuotesPanel({ transcripts }: TranscriptQuotesPanelProp
     return (
       <div
         key={`${keyPrefix}${transcript.id}`}
-        onClick={() => {
-          if (transcript.room_number !== undefined) {
-            setSelectedRoom(selectedRoom === transcript.room_number ? null : transcript.room_number);
-          }
-        }}
+        onClick={() => setSelectedTranscript(transcript)}
         className={`p-3 rounded-lg border bg-slate-800/30 backdrop-blur-sm cursor-pointer transition-all hover:scale-[1.02] hover:bg-slate-800/50 ${
           isMatchingTopic || isMatchingRoom
             ? 'border-blue-400/50 ring-1 ring-blue-400/30'

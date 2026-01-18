@@ -361,7 +361,7 @@ export default function MeetingCreateModal({ isOpen, onClose, onSuccess, editMee
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {quickPresets.slice(0, 6).map((preset) => (
+                {quickPresets.map((preset) => (
                   <button
                     key={preset.name}
                     type="button"

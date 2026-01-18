@@ -119,25 +119,25 @@ function AmbientDisplayContent() {
         <Header stats={stats} currentTime={currentTime} isDemoMode={isDemoMode} />
 
         {hasActiveFilters && (
-          <div className="mt-3 sm:mt-4 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-blue-500/10 border border-blue-400/30 rounded-lg sm:rounded-xl">
-            <Target className="w-4 h-4 text-blue-400 flex-shrink-0" />
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-1 overflow-x-auto">
+          <div className="mt-3 sm:mt-4 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-500/10 border border-blue-400/30 rounded-lg sm:rounded-xl">
+            <Target className="w-4 h-4 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0" />
+            <div className="flex items-center gap-2 sm:gap-2 flex-1 overflow-x-auto scrollbar-thin">
               {selectedTopic && (
-                <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-500/20 border border-blue-400/30 rounded-lg text-xs sm:text-sm text-white whitespace-nowrap">
+                <span className="px-2.5 sm:px-3 py-1 sm:py-1 bg-blue-500/20 border border-blue-400/30 rounded-lg text-xs sm:text-sm text-white whitespace-nowrap">
                   {selectedTopic.label}
                 </span>
               )}
               {selectedRoom !== null && (
-                <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-xs sm:text-sm text-white whitespace-nowrap">
+                <span className="px-2.5 sm:px-3 py-1 sm:py-1 bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-xs sm:text-sm text-white whitespace-nowrap">
                   {selectedRoom === 0 ? 'Main' : `R${selectedRoom}`}
                 </span>
               )}
             </div>
             <button
               onClick={clearAllFilters}
-              className="p-1.5 sm:px-3 sm:py-1.5 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 rounded-lg text-xs sm:text-sm text-white transition-colors flex items-center gap-1 sm:gap-2 flex-shrink-0"
+              className="p-2 sm:px-3 sm:py-1.5 bg-slate-700/50 active:bg-slate-600/70 sm:hover:bg-slate-600/50 border border-slate-600 rounded-lg text-xs sm:text-sm text-white transition-colors flex items-center gap-1 sm:gap-2 flex-shrink-0 touch-manipulation"
             >
-              <X className="w-3 h-3 sm:w-4 sm:h-4" />
+              <X className="w-4 h-4 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Clear</span>
             </button>
           </div>
@@ -152,10 +152,10 @@ function AmbientDisplayContent() {
             <button
               key={tab.id}
               onClick={() => setMobileTab(tab.id as typeof mobileTab)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg text-xs font-medium transition-colors touch-manipulation ${
                 mobileTab === tab.id
                   ? 'bg-slate-700 text-white'
-                  : 'text-slate-400 hover:text-white'
+                  : 'text-slate-400 active:text-white sm:hover:text-white'
               }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -242,7 +242,7 @@ function AmbientDisplayContent() {
       {statFilter && (
         <>
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/50 sm:bg-black/40 backdrop-blur-sm z-40 touch-none"
             onClick={clearAllFilters}
           />
           <StatDetailPanel
@@ -376,16 +376,16 @@ function MiniStatPill({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 sm:gap-2 flex-shrink-0 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all ${
+      className={`flex items-center gap-1.5 sm:gap-2 flex-shrink-0 px-3 sm:px-3 py-2 sm:py-2 rounded-lg transition-all touch-manipulation ${
         isActive
           ? `${activeClasses[color]} border-2`
-          : 'hover:bg-slate-800/50 border-2 border-transparent'
+          : 'active:bg-slate-800/50 sm:hover:bg-slate-800/50 border-2 border-transparent'
       } ${onClick ? 'cursor-pointer' : ''}`}
       title={`Click to ${isActive ? 'clear' : 'view'} ${label.toLowerCase()}`}
     >
-      <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${colorClasses[color]} ${pulse ? 'animate-pulse' : ''}`} />
+      <Icon className={`w-4 h-4 sm:w-4 sm:h-4 ${colorClasses[color]} ${pulse ? 'animate-pulse' : ''}`} />
       <div className="flex items-baseline gap-1 sm:flex-col sm:gap-0">
-        <span className="text-sm sm:text-lg font-bold text-white">{value}</span>
+        <span className="text-base sm:text-lg font-bold text-white">{value}</span>
         <span className="text-[10px] sm:text-xs text-slate-400 uppercase hidden sm:block">{label}</span>
       </div>
     </button>
@@ -1247,16 +1247,23 @@ function StatDetailPanel({
     ? demoData.meetings.filter((m) => m.status === 'active')
     : [];
 
+  const colorMap = {
+    emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-400' },
+    blue: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
+    cyan: { bg: 'bg-cyan-500/20', text: 'text-cyan-400' },
+    amber: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
+  };
+
   return (
-    <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[500px] lg:w-[600px] bg-slate-900/95 backdrop-blur-xl border-l border-slate-700 shadow-2xl z-50 flex flex-col">
-      <div className="p-4 sm:p-6 border-b border-slate-700 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-${color}-500/20 rounded-xl flex items-center justify-center`}>
-            <Icon className={`w-5 h-5 sm:w-6 sm:h-6 text-${color}-400`} />
+    <div className="fixed inset-0 sm:right-0 sm:left-auto sm:top-0 sm:bottom-0 w-full sm:w-[500px] lg:w-[600px] bg-slate-900/98 sm:bg-slate-900/95 backdrop-blur-xl sm:border-l border-slate-700 shadow-2xl z-50 flex flex-col animate-slide-in">
+      <div className="safe-top p-4 sm:p-6 border-b border-slate-700 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className={`w-12 h-12 sm:w-12 sm:h-12 ${colorMap[color as keyof typeof colorMap].bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+            <Icon className={`w-6 h-6 sm:w-6 sm:h-6 ${colorMap[color as keyof typeof colorMap].text}`} />
           </div>
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-white">{title}</h2>
-            <p className="text-xs sm:text-sm text-slate-400">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xl sm:text-xl font-bold text-white truncate">{title}</h2>
+            <p className="text-sm sm:text-sm text-slate-400">
               {filterType === 'rooms' && `${stats.activeRooms} active`}
               {filterType === 'topics' && `${nodes.length} topics`}
               {filterType === 'aligned' && `${stats.alignments} alignments`}
@@ -1266,13 +1273,13 @@ function StatDetailPanel({
         </div>
         <button
           onClick={onClose}
-          className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 rounded-lg flex items-center justify-center transition-colors"
+          className="w-10 h-10 sm:w-10 sm:h-10 bg-slate-800/50 active:bg-slate-700/70 sm:hover:bg-slate-700/50 border border-slate-600 rounded-lg flex items-center justify-center transition-colors flex-shrink-0 ml-3"
         >
-          <X className="w-4 h-4 sm:w-5 sm:h-5" />
+          <X className="w-5 h-5 sm:w-5 sm:h-5" />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 pb-safe">
         {filterType === 'rooms' && (
           <>
             {activeMeetings.map((meeting) => (
@@ -1282,22 +1289,22 @@ function StatDetailPanel({
                   setSelectedRoom(meeting.room_number as number);
                   onClose();
                 }}
-                className="w-full bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600/50 hover:border-emerald-400/50 rounded-xl p-4 transition-all text-left group"
+                className="w-full bg-slate-800/50 active:bg-slate-700/70 sm:hover:bg-slate-700/50 border border-slate-600/50 active:border-emerald-400/50 sm:hover:border-emerald-400/50 rounded-xl p-4 sm:p-4 transition-all text-left group touch-manipulation"
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-400 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                    <Users className="w-5 h-5 text-white" />
+                <div className="flex items-start gap-3 sm:gap-3">
+                  <div className="w-12 h-12 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-cyan-400 rounded-lg flex items-center justify-center flex-shrink-0 group-active:scale-95 sm:group-hover:scale-110 transition-transform">
+                    <Users className="w-6 h-6 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-white mb-1 truncate">
+                    <h3 className="font-bold text-white mb-1 text-base sm:text-base truncate">
                       {meeting.room_type === 'main' ? 'Main Room' : meeting.topic?.split(' - ')[0] || `Room ${meeting.room_number}`}
                     </h3>
-                    <p className="text-sm text-slate-400 truncate">
+                    <p className="text-sm sm:text-sm text-slate-400 line-clamp-2 sm:truncate">
                       {meeting.topic?.split(' - ')[1] || meeting.topic}
                     </p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                      <span>Host: {meeting.host_name}</span>
-                      <span className="flex items-center gap-1">
+                    <div className="flex items-center gap-3 mt-2 text-xs sm:text-xs text-slate-500">
+                      <span className="truncate">Host: {meeting.host_name}</span>
+                      <span className="flex items-center gap-1 flex-shrink-0">
                         <Clock className="w-3 h-3" />
                         Active
                       </span>
@@ -1318,21 +1325,21 @@ function StatDetailPanel({
                   setSelectedTopic(node);
                   onClose();
                 }}
-                className="w-full bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600/50 hover:border-blue-400/50 rounded-xl p-4 transition-all text-left group"
+                className="w-full bg-slate-800/50 active:bg-slate-700/70 sm:hover:bg-slate-700/50 border border-slate-600/50 active:border-blue-400/50 sm:hover:border-blue-400/50 rounded-xl p-4 sm:p-4 transition-all text-left group touch-manipulation"
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 sm:gap-3">
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
+                    className="w-12 h-12 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 group-active:scale-95 sm:group-hover:scale-110 transition-transform"
                     style={{ backgroundColor: `${CATEGORY_COLORS[node.category || 'General']}40` }}
                   >
-                    <Brain className="w-5 h-5" style={{ color: CATEGORY_COLORS[node.category || 'General'] }} />
+                    <Brain className="w-6 h-6 sm:w-5 sm:h-5" style={{ color: CATEGORY_COLORS[node.category || 'General'] }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-white truncate">{node.label}</h3>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                      <h3 className="font-bold text-white text-base sm:text-base truncate">{node.label}</h3>
                       {node.category && (
                         <span
-                          className="px-2 py-0.5 rounded text-xs font-medium"
+                          className="px-2 py-1 rounded text-xs font-medium self-start sm:self-auto"
                           style={{
                             backgroundColor: `${CATEGORY_COLORS[node.category]}20`,
                             color: CATEGORY_COLORS[node.category],
@@ -1342,7 +1349,7 @@ function StatDetailPanel({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-400">
+                    <div className="flex items-center gap-3 text-xs sm:text-xs text-slate-400">
                       <span>{Object.keys(node.roomMentions).length} rooms</span>
                       <span>{Math.round(node.importance * 100)}% importance</span>
                     </div>
@@ -1356,34 +1363,34 @@ function StatDetailPanel({
         {(filterType === 'aligned' || filterType === 'issues') && (
           <>
             {filteredInsights.map((insight) => {
-              const severityColors = {
-                info: 'blue',
-                warning: 'amber',
-                alert: 'red',
+              const severityColorMap = {
+                info: { border: 'border-blue-500/30', bg: 'bg-blue-500/20', text: 'text-blue-400' },
+                warning: { border: 'border-amber-500/30', bg: 'bg-amber-500/20', text: 'text-amber-400' },
+                alert: { border: 'border-red-500/30', bg: 'bg-red-500/20', text: 'text-red-400' },
               };
-              const severityColor = severityColors[insight.severity];
+              const colorScheme = severityColorMap[insight.severity];
 
               return (
                 <div
                   key={insight.id}
-                  className={`bg-slate-800/50 border border-${severityColor}-500/30 rounded-xl p-4 transition-all`}
+                  className={`bg-slate-800/50 border ${colorScheme.border} rounded-xl p-4 sm:p-4 transition-all`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 bg-${severityColor}-500/20 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                  <div className="flex items-start gap-3 sm:gap-3">
+                    <div className={`w-12 h-12 sm:w-10 sm:h-10 ${colorScheme.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
                       {insight.insight_type === 'alignment' ? (
-                        <CheckCircle className={`w-5 h-5 text-${severityColor}-400`} />
+                        <CheckCircle className={`w-6 h-6 sm:w-5 sm:h-5 ${colorScheme.text}`} />
                       ) : (
-                        <AlertTriangle className={`w-5 h-5 text-${severityColor}-400`} />
+                        <AlertTriangle className={`w-6 h-6 sm:w-5 sm:h-5 ${colorScheme.text}`} />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-white mb-1">{insight.title}</h3>
-                      <p className="text-sm text-slate-400 mb-2">{insight.description}</p>
-                      <div className="flex flex-wrap gap-1.5">
+                      <h3 className="font-bold text-white mb-1 text-base sm:text-base">{insight.title}</h3>
+                      <p className="text-sm sm:text-sm text-slate-400 mb-3 leading-relaxed">{insight.description}</p>
+                      <div className="flex flex-wrap gap-2">
                         {insight.involved_rooms.map((room) => (
                           <span
                             key={room}
-                            className="px-2 py-0.5 bg-slate-700/50 rounded text-xs text-slate-300"
+                            className="px-2.5 py-1 bg-slate-700/50 rounded-md text-xs text-slate-300"
                           >
                             {room === 0 ? 'Main' : `R${room}`}
                           </span>

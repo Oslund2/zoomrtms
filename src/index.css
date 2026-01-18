@@ -110,4 +110,16 @@
   .animate-smooth-scroll.paused {
     animation-play-state: paused;
   }
+
+  .animate-slide-in {
+    animation: slide-in-from-right 0.3s ease-out;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
 }
